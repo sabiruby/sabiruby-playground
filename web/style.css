@@ -128,17 +128,17 @@ button.primary { background: var(--rust); color: var(--rust-ink); border-color: 
 button[aria-pressed="true"] { background: var(--rust-soft); border-color: var(--rust); color: var(--rust); }
 select { max-width: 16rem; padding-right: 8px; }
 
-/* panes */
+/* panes, in the order of the pipeline: code -> AST -> bytecode -> result */
 .panes {
   flex: 1;
   min-height: 0;
-  display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  display: flex;
   gap: 12px;
   padding-bottom: 10px;
 }
-.panes.with-dump { grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr) minmax(0, 1fr); }
 .pane {
+  flex: 1 1 0;
+  min-width: 0;
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -157,7 +157,21 @@ select { max-width: 16rem; padding-right: 8px; }
   border-bottom: 1px solid var(--rule);
   min-height: 40px;
 }
-.pane-head h2 { margin: 0; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.08em; color: var(--muted); }
+.pane-head h2 { margin: 0; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.08em; color: var(--muted); display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+.step {
+  display: inline-grid;
+  place-items: center;
+  width: 1.45em;
+  height: 1.45em;
+  border-radius: 50%;
+  background: var(--rust-soft);
+  color: var(--rust);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0;
+}
+.editor-pane { flex-grow: 1.25; }
+.output-pane { flex-grow: 0.9; }
 .pane-note { font-size: 0.75rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .editor { flex: 1; min-height: 0; overflow: auto; }
 .output {
@@ -173,7 +187,7 @@ select { max-width: 16rem; padding-right: 8px; }
   overflow-wrap: anywhere;
   tab-size: 8;
 }
-.dump { white-space: pre; overflow-wrap: normal; font-size: 12px; }
+.tree { white-space: pre; overflow-wrap: normal; font-size: 12px; line-height: 1.45; }
 .output .err { display: block; color: var(--err); background: var(--err-soft); border-radius: 4px; padding: 6px 8px; margin-top: 6px; }
 .output .note { color: var(--muted); }
 .status {
@@ -228,12 +242,18 @@ select { max-width: 16rem; padding-right: 8px; }
   max-width: calc(100% - 32px);
 }
 
-@media (max-width: 900px) {
-  body { height: auto; }
-  .panes, .panes.with-dump { grid-template-columns: minmax(0, 1fr); }
+/* narrower: two rows in the same reading order (code, AST / bytecode, result) */
+@media (max-width: 1280px) {
+  body { height: auto; min-height: 100%; }
+  .panes { flex-wrap: wrap; }
+  .pane { flex: 1 1 calc(50% - 6px); height: 46vh; min-height: 280px; }
+}
+@media (max-width: 760px) {
+  .panes { flex-direction: column; flex-wrap: nowrap; }
+  .pane { flex: none; height: auto; }
   .editor-pane { height: 55vh; }
+  .ast-pane, .dump-pane { height: 50vh; }
   .output-pane { min-height: 40vh; }
-  .dump-pane { height: 60vh; }
 }
 @media (prefers-reduced-motion: no-preference) {
   button { transition: border-color 0.12s, background-color 0.12s; }

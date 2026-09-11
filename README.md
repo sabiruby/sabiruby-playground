@@ -13,8 +13,10 @@ the page is static (GitHub Pages) and everything runs in a Web Worker.
 * The VM is [`sabiruby`](https://crates.io/crates/sabiruby), pure Rust, with its garbage
   collector; the program runs in steps of 1,000,000 instructions, so an endless loop does not
   freeze the page and **Stop** terminates the worker at once.
-* The **Bytecode** pane lists the instructions (`sabiruby dump`, modelled on
-  `mrbc --verbose`), next to the output.
+* Four panes in the order of the pipeline: **code → AST → bytecode → result**. The AST is
+  Prism's syntax tree as `pm_prettyprint` prints it (the format of a debug `mrbc --verbose` and of
+  the book's chapter 5), i.e. the tree mruby's code generator walks; the bytecode is
+  `sabiruby dump` (modelled on `mrbc --verbose`). Both follow the editor and can be hidden.
 * The samples are SabiRuby's reference fixtures, each with the reference mruby's stdout:
   **Compare with mruby** checks the playground's output against it, byte for byte. The book's
   example scripts (*Deep dive into mruby*, via the mruby porting kit) are there too.
@@ -24,7 +26,7 @@ the page is static (GitHub Pages) and everything runs in a Web Worker.
 
 | | |
 |---|---|
-| `sabiruby.wasm` as deployed | 1,169,017 bytes, 421,881 over gzip (GitHub Pages compresses it) |
+| `sabiruby.wasm` as deployed | 1,169,017 bytes, 421,881 over gzip (GitHub Pages compresses it); with the AST pane, 1,233,982 bytes (421,485 gzipped, local build) |
 | page ready on the deployed site, fresh browser (navigation start to the Run button enabled: fonts, CodeMirror, the module, the worker, the VM) | 0.43–1.45 s (headless Chromium, two runs, 2026-09-12) |
 | the same from a local server | about 0.37 s |
 | instantiate the module and create the VM with mrblib | 15 ms (Node) |
@@ -51,7 +53,7 @@ test/        fixtures.mjs, api.mjs (Node), browser.mjs (Playwright + Chromium)
 
 The module is a WASI reactor with a C ABI (no wasm-bindgen): `sabi_compile`, `sabi_load`,
 `sabi_reset`, `sabi_start`, `sabi_step(budget)`, `sabi_take_output`, `sabi_take_text`,
-`sabi_dump`, `sabi_stats`, `sabi_alloc`/`sabi_free`, `sabi_version`. It imports only
+`sabi_dump`, `sabi_ast`, `sabi_stats`, `sabi_alloc`/`sabi_free`, `sabi_version`. It imports only
 `wasi_snapshot_preview1` functions for stdio and the environment (the VM needs no clock and no
 randomness); in the browser they come from browser_wasi_shim. The page compiles the module
 once and hands the `WebAssembly.Module` to each new worker. Design notes:
@@ -77,7 +79,7 @@ npx playwright-core install chromium && npm run test:browser
 
 | what | version |
 |---|---|
-| SabiRuby | commit `1007e3a` of kishima/sabiruby (`sabiruby` 0.2.0 + `sabiruby-compiler` with the wasm build) |
+| SabiRuby | commit `d0d9e80` of kishima/sabiruby (`sabiruby` 0.2.0 + `sabiruby-compiler` with the wasm build and the feature `ast`) |
 | mruby compiler | 4.1.0-rc (`3cf73ee`), Prism 1.9.0 |
 | wasi-sdk | 34.0 (clang 23) |
 | binaryen (`wasm-opt`) | version_132 |

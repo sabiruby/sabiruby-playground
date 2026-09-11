@@ -110,6 +110,21 @@ await check("a generator error (setjmp/longjmp through Wasm EH) in the browser",
   if ((await runCode("p :fine")) !== ":fine\n") throw new Error("module unusable after the error");
 });
 
+await check("the panes are in pipeline order: code, AST, bytecode, result", async () => {
+  const order = await page.$$eval("#panes > section", (s) => s.map((e) => e.className.split(" ")[1]));
+  if (order.join() !== "editor-pane,ast-pane,dump-pane,output-pane") throw new Error(order.join());
+});
+
+await check("the AST pane is open by default, follows edits and can be hidden", async () => {
+  if (await page.isHidden("#ast-pane")) throw new Error("hidden at start");
+  await setCode("x = 1 + 2");
+  await page.waitForFunction(() => /LocalVariableWriteNode/.test(document.getElementById("ast").textContent), null, { timeout: 5000 });
+  if (!(await page.textContent("#ast")).startsWith("@ ProgramNode (location: (1,0)-(1,9))")) throw new Error("unexpected tree");
+  await page.click("#toggle-ast");
+  if (!(await page.isHidden("#ast-pane"))) throw new Error("not hidden after the toggle");
+  await page.click("#toggle-ast");
+});
+
 await check("the bytecode pane is open by default, follows edits and can be hidden", async () => {
   if (await page.isHidden("#dump-pane")) throw new Error("hidden at start");
   await setCode("puts 'hello'");

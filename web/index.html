@@ -27,23 +27,40 @@
     </label>
     <button id="run" class="primary" type="button" disabled title="Ctrl+Enter">実行</button>
     <button id="stop" type="button" disabled>停止</button>
+    <button id="toggle-ast" type="button" aria-pressed="true">AST</button>
     <button id="toggle-dump" type="button" aria-pressed="true">バイトコード</button>
     <button id="share" type="button">共有リンク</button>
   </div>
 </header>
 
-<main class="panes with-dump" id="panes">
+<main class="panes" id="panes">
   <section class="pane editor-pane" aria-label="Ruby のコード">
     <div class="pane-head">
-      <h2>コード</h2>
+      <h2><span class="step">1</span>コード</h2>
       <span class="pane-note" id="sample-note"></span>
     </div>
     <div id="editor" class="editor"></div>
   </section>
 
+  <section class="pane ast-pane" id="ast-pane" aria-label="AST">
+    <div class="pane-head">
+      <h2><span class="step">2</span>AST</h2>
+      <span class="pane-note">Prism の構文木（本の第 5 章と同じ形式）</span>
+    </div>
+    <pre id="ast" class="output tree"></pre>
+  </section>
+
+  <section class="pane dump-pane" id="dump-pane" aria-label="バイトコード">
+    <div class="pane-head">
+      <h2><span class="step">3</span>バイトコード</h2>
+      <span class="pane-note">sabiruby dump の形式</span>
+    </div>
+    <pre id="dump" class="output tree"></pre>
+  </section>
+
   <section class="pane output-pane" aria-label="実行結果">
     <div class="pane-head">
-      <h2>出力</h2>
+      <h2><span class="step">4</span>実行結果</h2>
       <div class="compare">
         <button id="compare" type="button" hidden>本家 mruby の出力と比較</button>
         <span id="compare-result" class="chip" hidden></span>
@@ -51,14 +68,6 @@
     </div>
     <pre id="output" class="output" aria-live="polite"></pre>
     <div class="status" id="status">wasm を読み込んでいます…</div>
-  </section>
-
-  <section class="pane dump-pane" id="dump-pane" aria-label="バイトコード">
-    <div class="pane-head">
-      <h2>バイトコード</h2>
-      <span class="pane-note">sabiruby dump の形式</span>
-    </div>
-    <pre id="dump" class="output dump"></pre>
   </section>
 </main>
 

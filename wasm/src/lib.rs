@@ -188,6 +188,19 @@ pub extern "C" fn sabi_dump(len_out: *mut u32) -> *const u8 {
     })
 }
 
+/// Prism's syntax tree of `src`, pretty-printed (the format of a debug `mrbc --verbose` and of
+/// the book's listings): the tree the code generator walks. Parsed as `sabi_compile` parses.
+///
+/// # Safety
+/// `src` must point to `len` readable bytes.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn sabi_ast(src: *const u8, len: usize, len_out: *mut u32) -> *const u8 {
+    // SAFETY: by the contract above.
+    let src = unsafe { std::slice::from_raw_parts(src, len) };
+    let text = sabiruby_compiler::ast(src, FILENAME).unwrap_or_default();
+    with(|st| give(st, text.into_bytes(), len_out))
+}
+
 /// Instructions executed, objects alive and collections run, for the status line.
 ///
 /// # Safety

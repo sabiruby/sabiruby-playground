@@ -67,6 +67,8 @@ export class Sabi {
   output() { return this.take(this.x.sabi_take_output); }
   text() { return decoder.decode(this.take(this.x.sabi_take_text)); }
   dump() { return decoder.decode(this.take(this.x.sabi_dump)); }
+  /** Prism's pretty-printed syntax tree of `src` (as the book's listings). */
+  ast(src) { return this.withBytes(src, (p, n) => decoder.decode(this.take((lp) => this.x.sabi_ast(p, n, lp)))); }
   /** Bytes the C side wrote to stdout/stderr since the last call. */
   takeConsole() {
     const parts = this.console.splice(0);

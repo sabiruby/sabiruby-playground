@@ -1,5 +1,5 @@
 // Runs SabiRuby off the UI thread. The page sends the compiled WebAssembly.Module once
-// ("init"), then "run" / "dump" requests. Stopping a run is the page's worker.terminate():
+// ("init"), then "run" / "inspect" requests. Stopping a run is the page's worker.terminate():
 // it works even in the middle of a step, and the page starts a fresh worker from the same module.
 
 import { Sabi, OK, PAUSED, FINISHED } from "./sabi.js";
@@ -34,9 +34,15 @@ function run(src) {
   post({ type: "done", kind, text: r === FINISHED ? "" : sabi.text(), stats: sabi.stats(), ms: performance.now() - t0 });
 }
 
-function dump(src) {
-  if (sabi.compile(src) !== OK) { const text = sabi.text(); sabi.takeConsole(); return post({ type: "dump", ok: false, text }); }
-  post({ type: "dump", ok: true, text: sabi.dump() });
+/** The AST and the bytecode of `src`, for the panes between the code and the result. */
+function inspect(src, id) {
+  const ast = sabi.ast(src);
+  if (sabi.compile(src) !== OK) {
+    const text = sabi.text();
+    sabi.takeConsole();
+    return post({ type: "inspect", id, ast, ok: false, dump: text });
+  }
+  post({ type: "inspect", id, ast, ok: true, dump: sabi.dump() });
 }
 
 self.onmessage = async (e) => {
@@ -49,8 +55,8 @@ self.onmessage = async (e) => {
       post({ type: "ready", version: sabi.version(), ms: performance.now() - t0 });
     } else if (m.type === "run") {
       run(m.src);
-    } else if (m.type === "dump") {
-      dump(m.src);
+    } else if (m.type === "inspect") {
+      inspect(m.src, m.id);
     }
   } catch (err) {
     // a trap (e.g. out of memory) leaves the instance unusable; the page restarts the worker

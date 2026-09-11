@@ -64,6 +64,12 @@ const checks = {
     assert.equal(r.out, "true\n");
     assert.ok(sabi.stats().gc > 10);
   },
+  "ast is Prism's pretty-printed tree (the book's format)": () => {
+    const t = sabi.ast("x = 1 + 2");
+    assert.match(t, /^@ ProgramNode \(location: \(1,0\)-\(1,9\)\)\n\+-- locals: \[:x\]\n/);
+    assert.match(t, /@ LocalVariableWriteNode/);
+    assert.match(sabi.ast("def f("), /^@ ProgramNode/); // a tree even with a syntax error
+  },
   "dump lists the instructions": () => {
     assert.equal(sabi.compile("puts 'hello'"), OK);
     assert.match(sabi.dump(), /^irep 0 nregs=\d+ nlocals=1 [\s\S]*SSEND\t\d+\t\d+\t1\t; :puts/);

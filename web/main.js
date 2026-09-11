@@ -5,7 +5,7 @@ import { EditorView, basicSetup, EditorState, keymap, indentWithTab, StreamLangu
 
 const DEFAULT = `# SabiRuby Playground
 # mruby 4.1 のコンパイラ（C を wasm に）で翻訳し、Rust 製 VM の SabiRuby（wasm）で実行します。
-# Ctrl+Enter で実行。右端の欄がバイトコード（命令列）です。
+# Ctrl+Enter で実行。コード → AST → バイトコード → 実行結果 の順に並んでいます。
 
 class Greeter
   def initialize(name) = @name = name
@@ -28,8 +28,8 @@ const SHARE_LIMIT = 8192;     // bytes of source put into a link
 
 const $ = (id) => document.getElementById(id);
 const ui = {
-  run: $("run"), stop: $("stop"), toggleDump: $("toggle-dump"), share: $("share"), sample: $("sample"),
-  output: $("output"), status: $("status"), dump: $("dump"), dumpPane: $("dump-pane"), panes: $("panes"),
+  run: $("run"), stop: $("stop"), toggleDump: $("toggle-dump"), toggleAst: $("toggle-ast"), share: $("share"), sample: $("sample"),
+  output: $("output"), status: $("status"), dump: $("dump"), dumpPane: $("dump-pane"), ast: $("ast"), astPane: $("ast-pane"), panes: $("panes"),
   compare: $("compare"), compareResult: $("compare-result"), sampleNote: $("sample-note"), version: $("version"), toast: $("toast"),
 };
 
@@ -97,7 +97,7 @@ function onMessage(m) {
       } else {
         setStatus("準備完了");
       }
-      if (ui.toggleDump.getAttribute("aria-pressed") === "true") requestDump();
+      requestInspect();
       break;
     case "output":
       appendOutput(decoder.decode(m.bytes, { stream: true }));
@@ -109,8 +109,10 @@ function onMessage(m) {
       appendOutput(decoder.decode());
       finishRun(m);
       break;
-    case "dump":
-      ui.dump.textContent = m.text;
+    case "inspect":
+      if (m.id !== inspectId) break; // an older request; a newer one is on its way
+      ui.ast.textContent = m.ast;
+      ui.dump.textContent = m.dump;
       ui.dump.classList.toggle("note", !m.ok);
       break;
     case "crash":
@@ -132,7 +134,7 @@ function run() {
   hideCompare();
   setStatus("実行中…", true);
   worker.postMessage({ type: "run", src: lastRunSource });
-  if (ui.toggleDump.getAttribute("aria-pressed") === "true") requestDump();
+  requestInspect();
 }
 
 function finishRun(m) {
@@ -204,19 +206,21 @@ function setStatus(text, busy = false) {
 const fmt = (ms) => (ms < 10 ? ms.toFixed(1) : Math.round(ms).toLocaleString());
 const fmtStats = (s) => s ? `${s.instructions.toLocaleString()} 命令 · GC ${s.gc.toLocaleString()} 回 · 生存オブジェクト ${s.live.toLocaleString()}` : "";
 
-// ---------------------------------------------------------------- bytecode
+// ---------------------------------------------------------------- AST and bytecode
 
-let dumpTimer = null;
-function requestDump() {
-  if (ready) worker.postMessage({ type: "dump", src: source() });
+let inspectTimer = null, inspectId = 0;
+const shown = (button) => button.getAttribute("aria-pressed") === "true";
+function requestInspect() {
+  if (ready && (shown(ui.toggleAst) || shown(ui.toggleDump))) worker.postMessage({ type: "inspect", src: source(), id: ++inspectId });
 }
-ui.toggleDump.addEventListener("click", () => {
-  const on = ui.toggleDump.getAttribute("aria-pressed") !== "true";
-  ui.toggleDump.setAttribute("aria-pressed", String(on));
-  ui.dumpPane.hidden = !on;
-  ui.panes.classList.toggle("with-dump", on);
-  if (on) requestDump();
-});
+for (const [button, pane] of [[ui.toggleAst, ui.astPane], [ui.toggleDump, ui.dumpPane]]) {
+  button.addEventListener("click", () => {
+    const on = !shown(button);
+    button.setAttribute("aria-pressed", String(on));
+    pane.hidden = !on;
+    if (on) requestInspect();
+  });
+}
 
 // ---------------------------------------------------------------- samples and comparison
 
@@ -257,10 +261,8 @@ ui.sample.addEventListener("change", async () => {
 
 function onEdit() {
   if (current && source() !== current.text) ui.sampleNote.textContent = `${current.name}.rb（編集済み）`;
-  if (ui.toggleDump.getAttribute("aria-pressed") === "true") {
-    clearTimeout(dumpTimer);
-    dumpTimer = setTimeout(requestDump, 400);
-  }
+  clearTimeout(inspectTimer);
+  inspectTimer = setTimeout(requestInspect, 400);
 }
 
 function hideCompare() { ui.compare.hidden = true; ui.compareResult.hidden = true; }

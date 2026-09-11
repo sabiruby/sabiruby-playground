@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 env:
   # the SabiRuby commit the playground is built from (VM + compiler); bump deliberately
-  SABIRUBY_REF: 1007e3a597473dc1afe0b4b73cb72526b642a283  # 1007e3a: compiler builds for wasm32-wasip1
+  SABIRUBY_REF: d0d9e80d3c27ecf66ac2379d740468a95008e486  # d0d9e80: compiler feature ast (and the wasm build)
   WASI_SDK: "34"
   BINARYEN: "132"
 jobs:
