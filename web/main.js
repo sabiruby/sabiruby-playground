@@ -5,7 +5,7 @@ import { EditorView, basicSetup, EditorState, keymap, indentWithTab, StreamLangu
 
 const DEFAULT = `# SabiRuby Playground
 # mruby 4.1 のコンパイラ（C を wasm に）で翻訳し、Rust 製 VM の SabiRuby（wasm）で実行します。
-# Ctrl+Enter で実行。右上の「バイトコード」で命令列も見られます。
+# Ctrl+Enter で実行。右端の欄がバイトコード（命令列）です。
 
 class Greeter
   def initialize(name) = @name = name

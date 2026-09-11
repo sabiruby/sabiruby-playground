@@ -27,12 +27,12 @@
     </label>
     <button id="run" class="primary" type="button" disabled title="Ctrl+Enter">実行</button>
     <button id="stop" type="button" disabled>停止</button>
-    <button id="toggle-dump" type="button" aria-pressed="false">バイトコード</button>
+    <button id="toggle-dump" type="button" aria-pressed="true">バイトコード</button>
     <button id="share" type="button">共有リンク</button>
   </div>
 </header>
 
-<main class="panes" id="panes">
+<main class="panes with-dump" id="panes">
   <section class="pane editor-pane" aria-label="Ruby のコード">
     <div class="pane-head">
       <h2>コード</h2>
@@ -53,7 +53,7 @@
     <div class="status" id="status">wasm を読み込んでいます…</div>
   </section>
 
-  <section class="pane dump-pane" id="dump-pane" aria-label="バイトコード" hidden>
+  <section class="pane dump-pane" id="dump-pane" aria-label="バイトコード">
     <div class="pane-head">
       <h2>バイトコード</h2>
       <span class="pane-note">sabiruby dump の形式</span>

@@ -110,12 +110,14 @@ await check("a generator error (setjmp/longjmp through Wasm EH) in the browser",
   if ((await runCode("p :fine")) !== ":fine\n") throw new Error("module unusable after the error");
 });
 
-await check("the bytecode pane lists the instructions", async () => {
+await check("the bytecode pane is open by default, follows edits and can be hidden", async () => {
+  if (await page.isHidden("#dump-pane")) throw new Error("hidden at start");
   await setCode("puts 'hello'");
-  await page.click("#toggle-dump");
-  await page.waitForFunction(() => document.getElementById("dump").textContent.includes("SSEND"), null, { timeout: 5000 });
+  await page.waitForFunction(() => /SSEND.*:puts/.test(document.getElementById("dump").textContent), null, { timeout: 5000 });
   const d = await page.textContent("#dump");
   if (!/^irep 0 nregs=/.test(d)) throw new Error(d.slice(0, 80));
+  await page.click("#toggle-dump");
+  if (!(await page.isHidden("#dump-pane"))) throw new Error("not hidden after the toggle");
   await page.click("#toggle-dump");
 });
 
@@ -137,7 +139,6 @@ await check("a share link restores the code", async () => {
 if (process.env.SCREENSHOT) {
   await page.goto(url);
   await page.waitForFunction(() => !document.getElementById("run").disabled);
-  await page.click("#toggle-dump");
   await page.click("#run");
   await waitDone();
   await page.screenshot({ path: process.env.SCREENSHOT });
