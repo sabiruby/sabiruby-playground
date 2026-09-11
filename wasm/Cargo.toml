@@ -1,0 +1,21 @@
+[package]
+name = "sabiruby-wasm"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+description = "SabiRuby (VM) and the reference mruby compiler as one wasm32-wasip1 module for the browser playground"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+# Local checkout next to this repository (see README: Building). CI checks out kishima/sabiruby there.
+sabiruby = { path = "../../sabiruby" }
+sabiruby-compiler = { path = "../../sabiruby/compiler" }
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

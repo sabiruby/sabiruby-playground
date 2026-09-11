@@ -1,0 +1,13 @@
+{
+  "private": true,
+  "name": "sabiruby-playground",
+  "description": "Tests of the SabiRuby playground (the site itself has no build step and no npm dependencies)",
+  "type": "module",
+  "scripts": {
+    "test": "node test/fixtures.mjs && node test/api.mjs",
+    "test:browser": "node test/browser.mjs"
+  },
+  "devDependencies": {
+    "playwright-core": "1.63.0"
+  }
+}

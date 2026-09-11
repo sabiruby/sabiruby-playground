@@ -1,0 +1,9 @@
+[build]
+target = "wasm32-wasip1"
+
+[target.wasm32-wasip1]
+# wasm has one thread and one stack: the VM's native re-entry (bounded by NATIVE_DEPTH_MAX) and
+# Prism's recursive descent (PRISM_DEPTH_MAXIMUM=256) both run on it. Measured: the deepest
+# cases (native re-entry up to SystemStackError, 250 nested literals) already pass with the
+# default 1 MB; 4 MB leaves headroom (the stack is part of the initial linear memory).
+rustflags = ["-C", "link-arg=-zstack-size=4194304"]

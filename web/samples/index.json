@@ -1,0 +1,271 @@
+{
+ "fixtures": [
+  {
+   "name": "args",
+   "path": "samples/fixtures/args.rb",
+   "expected": "samples/fixtures/args.out"
+  },
+  {
+   "name": "arith",
+   "path": "samples/fixtures/arith.rb",
+   "expected": "samples/fixtures/arith.out"
+  },
+  {
+   "name": "block",
+   "path": "samples/fixtures/block.rb",
+   "expected": "samples/fixtures/block.out"
+  },
+  {
+   "name": "closure",
+   "path": "samples/fixtures/closure.rb",
+   "expected": "samples/fixtures/closure.out"
+  },
+  {
+   "name": "collections",
+   "path": "samples/fixtures/collections.rb",
+   "expected": "samples/fixtures/collections.out"
+  },
+  {
+   "name": "control",
+   "path": "samples/fixtures/control.rb",
+   "expected": "samples/fixtures/control.out"
+  },
+  {
+   "name": "enumerator",
+   "path": "samples/fixtures/enumerator.rb",
+   "expected": "samples/fixtures/enumerator.out"
+  },
+  {
+   "name": "errors",
+   "path": "samples/fixtures/errors.rb",
+   "expected": "samples/fixtures/errors.out"
+  },
+  {
+   "name": "errors2",
+   "path": "samples/fixtures/errors2.rb",
+   "expected": "samples/fixtures/errors2.out"
+  },
+  {
+   "name": "exception",
+   "path": "samples/fixtures/exception.rb",
+   "expected": "samples/fixtures/exception.out"
+  },
+  {
+   "name": "gc",
+   "path": "samples/fixtures/gc.rb",
+   "expected": "samples/fixtures/gc.out"
+  },
+  {
+   "name": "hello",
+   "path": "samples/fixtures/hello.rb",
+   "expected": "samples/fixtures/hello.out"
+  },
+  {
+   "name": "klass",
+   "path": "samples/fixtures/klass.rb",
+   "expected": "samples/fixtures/klass.out"
+  },
+  {
+   "name": "kwargs",
+   "path": "samples/fixtures/kwargs.rb",
+   "expected": "samples/fixtures/kwargs.out"
+  },
+  {
+   "name": "method",
+   "path": "samples/fixtures/method.rb",
+   "expected": "samples/fixtures/method.out"
+  },
+  {
+   "name": "objects",
+   "path": "samples/fixtures/objects.rb",
+   "expected": "samples/fixtures/objects.out"
+  },
+  {
+   "name": "strings",
+   "path": "samples/fixtures/strings.rb",
+   "expected": "samples/fixtures/strings.out"
+  }
+ ],
+ "book": [
+  {
+   "name": "cg_addilv",
+   "path": "samples/book/cg_addilv.rb"
+  },
+  {
+   "name": "cg_ast",
+   "path": "samples/book/cg_ast.rb"
+  },
+  {
+   "name": "cg_block",
+   "path": "samples/book/cg_block.rb"
+  },
+  {
+   "name": "cg_call1",
+   "path": "samples/book/cg_call1.rb"
+  },
+  {
+   "name": "cg_call2",
+   "path": "samples/book/cg_call2.rb"
+  },
+  {
+   "name": "cg_case",
+   "path": "samples/book/cg_case.rb"
+  },
+  {
+   "name": "cg_casein",
+   "path": "samples/book/cg_casein.rb"
+  },
+  {
+   "name": "cg_def",
+   "path": "samples/book/cg_def.rb"
+  },
+  {
+   "name": "cg_fold",
+   "path": "samples/book/cg_fold.rb"
+  },
+  {
+   "name": "cg_for",
+   "path": "samples/book/cg_for.rb"
+  },
+  {
+   "name": "cg_if",
+   "path": "samples/book/cg_if.rb"
+  },
+  {
+   "name": "cg_int",
+   "path": "samples/book/cg_int.rb"
+  },
+  {
+   "name": "cg_massign",
+   "path": "samples/book/cg_massign.rb"
+  },
+  {
+   "name": "cg_opassign",
+   "path": "samples/book/cg_opassign.rb"
+  },
+  {
+   "name": "cg_rescue",
+   "path": "samples/book/cg_rescue.rb"
+  },
+  {
+   "name": "cg_ret",
+   "path": "samples/book/cg_ret.rb"
+  },
+  {
+   "name": "cg_str",
+   "path": "samples/book/cg_str.rb"
+  },
+  {
+   "name": "cg_super",
+   "path": "samples/book/cg_super.rb"
+  },
+  {
+   "name": "cg_upvar",
+   "path": "samples/book/cg_upvar.rb"
+  },
+  {
+   "name": "cg_while",
+   "path": "samples/book/cg_while.rb"
+  },
+  {
+   "name": "corelib_error_messages",
+   "path": "samples/book/corelib_error_messages.rb"
+  },
+  {
+   "name": "corelib_exceptions",
+   "path": "samples/book/corelib_exceptions.rb"
+  },
+  {
+   "name": "corelib_hash",
+   "path": "samples/book/corelib_hash.rb"
+  },
+  {
+   "name": "corelib_kernel",
+   "path": "samples/book/corelib_kernel.rb"
+  },
+  {
+   "name": "corelib_mrblib_internal",
+   "path": "samples/book/corelib_mrblib_internal.rb"
+  },
+  {
+   "name": "corelib_numbers",
+   "path": "samples/book/corelib_numbers.rb"
+  },
+  {
+   "name": "corelib_raise_forms",
+   "path": "samples/book/corelib_raise_forms.rb"
+  },
+  {
+   "name": "corelib_strings",
+   "path": "samples/book/corelib_strings.rb"
+  },
+  {
+   "name": "corelib_uncaught",
+   "path": "samples/book/corelib_uncaught.rb"
+  },
+  {
+   "name": "gc_observe",
+   "path": "samples/book/gc_observe.rb"
+  },
+  {
+   "name": "gc_stat",
+   "path": "samples/book/gc_stat.rb"
+  },
+  {
+   "name": "gc_symbols",
+   "path": "samples/book/gc_symbols.rb"
+  },
+  {
+   "name": "overview_diff",
+   "path": "samples/book/overview_diff.rb"
+  },
+  {
+   "name": "overview_hello",
+   "path": "samples/book/overview_hello.rb"
+  },
+  {
+   "name": "vm_break",
+   "path": "samples/book/vm_break.rb"
+  },
+  {
+   "name": "vm_closure",
+   "path": "samples/book/vm_closure.rb"
+  },
+  {
+   "name": "vm_const",
+   "path": "samples/book/vm_const.rb"
+  },
+  {
+   "name": "vm_fiber",
+   "path": "samples/book/vm_fiber.rb"
+  },
+  {
+   "name": "vm_fiber2",
+   "path": "samples/book/vm_fiber2.rb"
+  },
+  {
+   "name": "vm_fiber_cfunc",
+   "path": "samples/book/vm_fiber_cfunc.rb"
+  },
+  {
+   "name": "vm_ivars",
+   "path": "samples/book/vm_ivars.rb"
+  },
+  {
+   "name": "vm_kw_positional",
+   "path": "samples/book/vm_kw_positional.rb"
+  },
+  {
+   "name": "vm_method_missing",
+   "path": "samples/book/vm_method_missing.rb"
+  },
+  {
+   "name": "vm_stack",
+   "path": "samples/book/vm_stack.rb"
+  },
+  {
+   "name": "vm_visibility",
+   "path": "samples/book/vm_visibility.rb"
+  }
+ ]
+}
