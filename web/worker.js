@@ -1,8 +1,8 @@
 // Runs SabiRuby off the UI thread. The page sends the compiled WebAssembly.Module once
-// ("init"), then "run" / "inspect" requests. Stopping a run is the page's worker.terminate():
+// ("init"), then "run" / "inspect" / "debug-*" requests. Stopping a run is the page's worker.terminate():
 // it works even in the middle of a step, and the page starts a fresh worker from the same module.
 
-import { Sabi, OK, PAUSED, FINISHED } from "./sabi.js";
+import { Sabi, OK, PAUSED, FINISHED, STEP_BUDGET } from "./sabi.js";
 
 const BUDGET = 1_000_000; // instructions per step; output and progress go out between steps
 let sabi;
@@ -42,7 +42,44 @@ function inspect(src, id) {
     sabi.takeConsole();
     return post({ type: "inspect", id, ast, ok: false, dump: text });
   }
-  post({ type: "inspect", id, ast, ok: true, dump: sabi.dump() });
+  // `dumpJson` is the same listing as data: the page draws the rows from it (opcode tooltips)
+  post({ type: "inspect", id, ast, ok: true, dump: sabi.dump(), dumpJson: sabi.dumpJson() });
+}
+
+// ---- debugging: the page drives the VM one step at a time and reads its state
+
+/** Compiles and prepares the program, with recording on. */
+function debugStart(src) {
+  if (sabi.reset() !== OK) return post({ type: "debug", phase: "error", text: sabi.text() });
+  sabi.trace(true);
+  if (sabi.compile(src) !== OK) {
+    const text = sabi.text();
+    sabi.takeConsole();
+    return post({ type: "debug", phase: "compile_error", text });
+  }
+  if (sabi.start() !== OK) return post({ type: "debug", phase: "error", text: sabi.text() });
+  sabi.takeTrace(); // events from loading mrblib are not interesting
+  post({ type: "debug", phase: "started", dump: sabi.dumpJson(), state: sabi.state(), trace: [], stats: sabi.stats() });
+}
+
+/** One step of the chosen kind; `STEP_BUDGET` runs on like the Run button. */
+function debugStep(mode, budget) {
+  const t0 = performance.now();
+  let r;
+  if (mode === STEP_BUDGET) {
+    let last = t0;
+    while ((r = sabi.stepUntil(STEP_BUDGET, budget || BUDGET)) === PAUSED) {
+      flush();
+      const now = performance.now();
+      if (now - last > 200) { post({ type: "progress", stats: sabi.stats(), ms: now - t0 }); last = now; }
+    }
+  } else {
+    r = sabi.stepUntil(mode, budget || BUDGET);
+  }
+  flush();
+  const phase = r === PAUSED ? "paused" : r === FINISHED ? "finished" : "error";
+  post({ type: "debug", phase, state: sabi.state(), trace: sabi.takeTrace(), stats: sabi.stats(),
+         text: r === FINISHED || r === PAUSED ? "" : sabi.text(), ms: performance.now() - t0 });
 }
 
 self.onmessage = async (e) => {
@@ -57,6 +94,20 @@ self.onmessage = async (e) => {
       run(m.src);
     } else if (m.type === "inspect") {
       inspect(m.src, m.id);
+    } else if (m.type === "debug-start") {
+      debugStart(m.src);
+    } else if (m.type === "debug-step") {
+      debugStep(m.mode, m.budget);
+    } else if (m.type === "debug-gc") {
+      if (m.stress !== undefined) sabi.gcStress(m.stress);
+      if (m.collect) sabi.gcCollect();
+      post({ type: "debug", phase: "paused", state: sabi.state(), trace: sabi.takeTrace(), stats: sabi.stats(), text: "" });
+    } else if (m.type === "debug-stop") {
+      sabi.trace(false);
+      sabi.reset();
+      post({ type: "debug", phase: "stopped" });
+    } else if (m.type === "op-counts") {
+      post({ type: "op-counts", counts: sabi.opCounts() });
     }
   } catch (err) {
     // a trap (e.g. out of memory) leaves the instance unusable; the page restarts the worker

@@ -145,7 +145,8 @@
   },
   {
    "name": "cg_rescue",
-   "path": "samples/book/cg_rescue.rb"
+   "path": "samples/book/cg_rescue.rb",
+   "note": "例外タブ: raise から catch 表を引いて rescue に着くまで"
   },
   {
    "name": "cg_ret",
@@ -161,7 +162,8 @@
   },
   {
    "name": "cg_upvar",
-   "path": "samples/book/cg_upvar.rb"
+   "path": "samples/book/cg_upvar.rb",
+   "note": "バイトコード欄の GETUPVAR と、環境タブの上位環境のたどり方"
   },
   {
    "name": "cg_while",
@@ -204,6 +206,11 @@
    "path": "samples/book/corelib_uncaught.rb"
   },
   {
+   "name": "gc_churn",
+   "path": "samples/book/gc_churn.rb",
+   "note": "GC タブ: live と allocated_since_gc、回収の履歴"
+  },
+  {
    "name": "gc_observe",
    "path": "samples/book/gc_observe.rb"
   },
@@ -229,7 +236,8 @@
   },
   {
    "name": "vm_closure",
-   "path": "samples/book/vm_closure.rb"
+   "path": "samples/book/vm_closure.rb",
+   "note": "環境タブ: mk が返るときに Env がヒープへ移る（detached）"
   },
   {
    "name": "vm_const",
@@ -237,11 +245,13 @@
   },
   {
    "name": "vm_fiber",
-   "path": "samples/book/vm_fiber.rb"
+   "path": "samples/book/vm_fiber.rb",
+   "note": "Fiber タブ: resume と yield で実行中の context が入れ替わる"
   },
   {
    "name": "vm_fiber2",
-   "path": "samples/book/vm_fiber2.rb"
+   "path": "samples/book/vm_fiber2.rb",
+   "note": "Fiber タブ: 二つの Fiber と root の間の切り替え"
   },
   {
    "name": "vm_fiber_cfunc",

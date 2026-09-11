@@ -110,9 +110,10 @@ await check("a generator error (setjmp/longjmp through Wasm EH) in the browser",
   if ((await runCode("p :fine")) !== ":fine\n") throw new Error("module unusable after the error");
 });
 
-await check("the panes are in pipeline order: code, AST, bytecode, result", async () => {
+await check("the panes are in pipeline order: code, AST, bytecode, result (the VM pane last)", async () => {
   const order = await page.$$eval("#panes > section", (s) => s.map((e) => e.className.split(" ")[1]));
-  if (order.join() !== "editor-pane,ast-pane,dump-pane,output-pane") throw new Error(order.join());
+  if (order.join() !== "editor-pane,ast-pane,dump-pane,output-pane,vm-pane") throw new Error(order.join());
+  if (!(await page.isHidden("#vm-pane"))) throw new Error("the VM pane shows outside a debug session");
 });
 
 await check("the AST pane is open by default, follows edits and can be hidden", async () => {
@@ -149,6 +150,65 @@ await check("a share link restores the code", async () => {
   const out = await p2.textContent("#output");
   await p2.close();
   if (out !== "shared 2\n") throw new Error(JSON.stringify(out));
+});
+
+// ---- the debugger (docs/playground.md, the VM's src/inspect.rs)
+
+await check("stepping by line moves the current instruction", async () => {
+  await setCode("a = 1\nb = a + 1\nc = b * 2\nd = c - 1\ne = d + a\np e\n"); // more lines than the steps below
+  await page.click("#debug");
+  await page.waitForSelector("#dump .insn.current", { timeout: 20000 });
+  const at = () => page.$eval("#dump .insn.current", (e) => `${e.dataset.irep}:${e.dataset.pc}`);
+  const seen = [await at()];
+  for (let i = 0; i < 3; i++) {
+    await page.click("#step-line");
+    await page.waitForFunction(
+      (prev) => { const c = document.querySelector("#dump .insn.current"); return c && `${c.dataset.irep}:${c.dataset.pc}` !== prev; },
+      seen[seen.length - 1], { timeout: 20000 });
+    seen.push(await at());
+  }
+  if (new Set(seen).size !== seen.length) throw new Error(`did not move: ${seen.join(" -> ")}`);
+});
+
+await check("the frame table shows main and its registers", async () => {
+  const text = await page.textContent("#vm-body");
+  if (!text.includes("(main)")) throw new Error(text.slice(0, 160));
+  if (!/R0\s*self\s*main/.test(text.replace(/\s+/g, " "))) throw new Error(`no self register: ${text.slice(0, 200)}`);
+});
+
+await check("an opcode's description pops up in the listing", async () => {
+  await page.hover("#dump .insn.current .op");
+  const tip = await page.waitForSelector("#opcode-tip:not([hidden])", { timeout: 10000 });
+  const op = await page.textContent("#dump .insn.current .op");
+  const text = await tip.textContent();
+  if (!text.startsWith(op.trim())) throw new Error(`${op}: ${text.slice(0, 120)}`);
+  if (text.length < 20) throw new Error(`too short: ${text}`);
+});
+
+await check("running a closure to the end detaches its environment", async () => {
+  await page.click("#debug"); // leave the session above
+  await page.selectOption("#sample", "b:vm_closure");
+  await page.waitForFunction(() => document.getElementById("sample-note").textContent.startsWith("vm_closure.rb"));
+  await page.click("#debug");
+  await page.waitForSelector("#dump .insn.current", { timeout: 20000 });
+  await page.click("#step-go");
+  await page.waitForFunction(() => /^(完了|例外で終了)/.test(document.getElementById("status").textContent), null, { timeout: 30000 });
+  await page.click('#vm-tabs button[data-tab="envs"]');
+  const text = await page.textContent("#vm-body");
+  if (!/detached|外された/.test(text)) throw new Error(text.slice(0, 300));
+});
+
+await check("the GC tab counts the objects and can collect", async () => {
+  await page.click('#vm-tabs button[data-tab="gc"]');
+  const before = await page.textContent("#vm-body");
+  if (!before.includes("生きている")) throw new Error(before.slice(0, 160));
+  await page.click("#vm-body .gc-buttons button");
+  await page.waitForFunction(() => !/^$/.test(document.getElementById("vm-body").textContent), null, { timeout: 10000 });
+  await page.click('#vm-tabs button[data-tab="ops"]');
+  const ops = await page.textContent("#vm-body");
+  if (!/命令、/.test(ops)) throw new Error(ops.slice(0, 160));
+  await page.click("#debug"); // back to the normal mode for the checks below
+  await page.waitForFunction(() => document.getElementById("vm-pane").hidden);
 });
 
 if (process.env.SCREENSHOT) {

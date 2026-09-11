@@ -8,6 +8,8 @@
 
 use std::cell::RefCell;
 
+mod json;
+
 use sabiruby::{Step, Vm};
 
 const OK: u32 = 0;
@@ -27,7 +29,13 @@ struct State {
     text: Vec<u8>,
     /// Buffer behind the pointer the last `sabi_take_*` / `sabi_dump` returned.
     ret: Vec<u8>,
+    /// What `Vm::load` added to the binary's irep indices (mrblib and the gems come first),
+    /// so that a frame's irep can be found in the listing.
+    offset: usize,
     version: Vec<u8>,
+    /// Kept across `sabi_reset`, which builds a new VM.
+    trace: bool,
+    stress: bool,
 }
 
 thread_local! {
@@ -50,8 +58,9 @@ fn give(st: &mut State, bytes: Vec<u8>, len_out: *mut u32) -> *const u8 {
 
 /// A fresh VM with mrblib loaded (the state `sabiruby` starts a program in).
 fn new_vm(st: &mut State) -> u32 {
+    let (trace, stress) = (st.trace, st.stress);
     match Vm::with_mrblib() {
-        Ok(vm) => { st.vm = Some(vm); OK }
+        Ok(mut vm) => { vm.set_trace(trace); vm.set_gc_stress(stress); st.vm = Some(vm); OK }
         Err(e) => { st.text = format!("could not initialise the VM: {e}").into_bytes(); INTERNAL_ERROR }
     }
 }
@@ -133,9 +142,10 @@ pub extern "C" fn sabi_start() -> u32 {
             if r != OK { return r; }
         }
         let Some(bin) = st.bin.clone() else { st.text = b"nothing compiled".to_vec(); return INTERNAL_ERROR };
+        let root = sabiruby::rite::parse(&bin).map(|r| r.root).unwrap_or(0);
         let vm = st.vm.as_mut().unwrap();
         match vm.load(&bin) {
-            Ok(irep) => { vm.start(irep); OK }
+            Ok(irep) => { st.offset = irep - root; vm.start(irep); OK }
             Err(e) => { st.text = vm.describe_error(&e).into_bytes(); INTERNAL_ERROR }
         }
     })
@@ -199,6 +209,100 @@ pub unsafe extern "C" fn sabi_ast(src: *const u8, len: usize, len_out: *mut u32)
     let src = unsafe { std::slice::from_raw_parts(src, len) };
     let text = sabiruby_compiler::ast(src, FILENAME).unwrap_or_default();
     with(|st| give(st, text.into_bytes(), len_out))
+}
+
+/// Records what the interpreter does (environments, unwinding, fibers, collections) until the
+/// next `sabi_take_trace`. Off by default; `sabi_reset` keeps the setting.
+#[unsafe(no_mangle)]
+pub extern "C" fn sabi_trace(on: u32) {
+    with(|st| { st.trace = on != 0; if let Some(vm) = st.vm.as_mut() { vm.set_trace(on != 0); } });
+}
+
+/// Runs until something happens: `mode` 0 one instruction, 1 the source line changes (or the
+/// program enters or leaves a frame), 2 a frame is entered or left, 3 `budget` instructions.
+/// `budget` also bounds modes 1 and 2. Same result as `sabi_step`.
+#[unsafe(no_mangle)]
+pub extern "C" fn sabi_step_until(mode: u32, budget: u32) -> u32 {
+    with(|st| {
+        let Some(vm) = st.vm.as_mut() else { st.text = b"no program started".to_vec(); return INTERNAL_ERROR };
+        if mode == 3 {
+            return match vm.step(budget as u64) {
+                Ok(Step::Paused) => 0,
+                Ok(Step::Finished(_)) => 1,
+                Err(e) => { st.text = vm.describe_error(&e).into_bytes(); RUNTIME_ERROR }
+            };
+        }
+        let (line0, depth0) = (vm.current_line(), vm.ci.len());
+        for _ in 0..budget.max(1) {
+            match vm.step(1) {
+                Ok(Step::Paused) => {}
+                Ok(Step::Finished(_)) => return 1,
+                Err(e) => { st.text = vm.describe_error(&e).into_bytes(); return RUNTIME_ERROR }
+            }
+            let depth = vm.ci.len();
+            let changed_frame = depth != depth0;
+            if mode == 0 { return 0; }
+            if mode == 2 && changed_frame { return 0; }
+            if mode == 1 && (changed_frame || (vm.current_line().is_some() && vm.current_line() != line0)) { return 0; }
+        }
+        0
+    })
+}
+
+/// The VM as it stands, as JSON (`Vm::snapshot`): contexts, frames, registers, environments,
+/// heap. `regs_frames` is how many innermost frames of each context carry their registers.
+#[unsafe(no_mangle)]
+pub extern "C" fn sabi_state(regs_frames: u32, len_out: *mut u32) -> *const u8 {
+    with(|st| {
+        let text = match st.vm.as_ref() {
+            Some(vm) => json::snapshot(&vm.snapshot(regs_frames as usize)),
+            None => "{}".into(),
+        };
+        give(st, text.into_bytes(), len_out)
+    })
+}
+
+/// What was recorded since the last call, as a JSON array.
+#[unsafe(no_mangle)]
+pub extern "C" fn sabi_take_trace(len_out: *mut u32) -> *const u8 {
+    with(|st| {
+        let events = st.vm.as_mut().map(|vm| vm.take_trace()).unwrap_or_default();
+        let text = json::trace(&events);
+        give(st, text.into_bytes(), len_out)
+    })
+}
+
+/// Collects now (`GC.start`).
+#[unsafe(no_mangle)]
+pub extern "C" fn sabi_gc_collect() -> u32 {
+    with(|st| match st.vm.as_mut() { Some(vm) => { vm.gc_collect(); OK } None => INTERNAL_ERROR })
+}
+
+/// Collect after every allocation (`SABIRUBY_GC_STRESS`).
+#[unsafe(no_mangle)]
+pub extern "C" fn sabi_gc_stress(on: u32) {
+    with(|st| { st.stress = on != 0; if let Some(vm) = st.vm.as_mut() { vm.set_gc_stress(on != 0); } });
+}
+
+/// `[{"op":"MOVE","count":n}, ..]` for the executed opcodes.
+#[unsafe(no_mangle)]
+pub extern "C" fn sabi_op_counts(len_out: *mut u32) -> *const u8 {
+    with(|st| {
+        let text = match st.vm.as_ref() { Some(vm) => json::op_counts(vm), None => "[]".into() };
+        give(st, text.into_bytes(), len_out)
+    })
+}
+
+/// The instruction listing as data (irep, pc, line, opcode, operands), for the bytecode pane.
+#[unsafe(no_mangle)]
+pub extern "C" fn sabi_dump_json(len_out: *mut u32) -> *const u8 {
+    with(|st| {
+        let text = match st.bin.clone() {
+            Some(bin) => json::dump(&bin, st.offset),
+            None => "{}".into(),
+        };
+        give(st, text.into_bytes(), len_out)
+    })
 }
 
 /// Instructions executed, objects alive and collections run, for the status line.

@@ -6,6 +6,9 @@ import { WASI, File, OpenFile, ConsoleStdout } from "./vendor/browser_wasi_shim/
 
 export const OK = 0, COMPILE_ERROR = 1, RUNTIME_ERROR = 2, INTERNAL_ERROR = 3;
 export const PAUSED = 0, FINISHED = 1;
+/** `stepUntil` modes: one instruction, until the line changes, until a frame is entered or left,
+ *  or a budget of instructions (what the Run button uses). */
+export const STEP_INSN = 0, STEP_LINE = 1, STEP_FRAME = 2, STEP_BUDGET = 3;
 
 const decoder = new TextDecoder("utf-8", { fatal: false }); // Ruby strings are bytes
 const encoder = new TextEncoder();
@@ -69,6 +72,23 @@ export class Sabi {
   dump() { return decoder.decode(this.take(this.x.sabi_dump)); }
   /** Prism's pretty-printed syntax tree of `src` (as the book's listings). */
   ast(src) { return this.withBytes(src, (p, n) => decoder.decode(this.take((lp) => this.x.sabi_ast(p, n, lp)))); }
+
+  // ---- debugging (src/inspect.rs of the VM; see docs/playground.md)
+
+  /** Records what the interpreter does until the next `takeTrace()`. */
+  trace(on) { this.x.sabi_trace(on ? 1 : 0); }
+  /** STEP_INSN / STEP_LINE / STEP_FRAME / STEP_BUDGET; returns PAUSED, FINISHED or an error. */
+  stepUntil(mode, budget = 1_000_000) { return this.x.sabi_step_until(mode, budget); }
+  /** The VM as it stands: contexts, frames, registers, environments, heap. */
+  state(regsFrames = 8) { return JSON.parse(decoder.decode(this.take((lp) => this.x.sabi_state(regsFrames, lp)))); }
+  /** The events recorded since the last call. */
+  takeTrace() { return JSON.parse(decoder.decode(this.take(this.x.sabi_take_trace))); }
+  gcCollect() { return this.x.sabi_gc_collect(); }
+  gcStress(on) { this.x.sabi_gc_stress(on ? 1 : 0); }
+  /** `[{op, count}, ..]` for the instructions executed so far. */
+  opCounts() { return JSON.parse(decoder.decode(this.take(this.x.sabi_op_counts))); }
+  /** The instruction listing as data: `{offset, root, ireps:[{index, insns:[{pc, line, op, text}]}]}`. */
+  dumpJson() { return JSON.parse(decoder.decode(this.take(this.x.sabi_dump_json))); }
   /** Bytes the C side wrote to stdout/stderr since the last call. */
   takeConsole() {
     const parts = this.console.splice(0);

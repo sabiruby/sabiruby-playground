@@ -1,7 +1,9 @@
 // UI of the playground. All Ruby runs in worker.js; this file owns the editor, the samples,
 // the output pane and the worker's lifecycle (Stop = terminate + a new worker).
 
-import { EditorView, basicSetup, EditorState, keymap, indentWithTab, StreamLanguage, HighlightStyle, syntaxHighlighting, ruby, tags } from "./vendor/codemirror/codemirror.js";
+import { EditorView, basicSetup, EditorState, keymap, indentWithTab, StreamLanguage, HighlightStyle, syntaxHighlighting, ruby, tags, Compartment, StateField, StateEffect, Decoration } from "./vendor/codemirror/codemirror.js";
+import { renderDump, highlightDump, renderVm, initOpcodeTips } from "./debug.js";
+import { STEP_INSN, STEP_LINE, STEP_FRAME, STEP_BUDGET } from "./sabi.js";
 
 const DEFAULT = `# SabiRuby Playground
 # mruby 4.1 のコンパイラ（C を wasm に）で翻訳し、Rust 製 VM の SabiRuby（wasm）で実行します。
@@ -31,6 +33,9 @@ const ui = {
   run: $("run"), stop: $("stop"), toggleDump: $("toggle-dump"), toggleAst: $("toggle-ast"), share: $("share"), sample: $("sample"),
   output: $("output"), status: $("status"), dump: $("dump"), dumpPane: $("dump-pane"), ast: $("ast"), astPane: $("ast-pane"), panes: $("panes"),
   compare: $("compare"), compareResult: $("compare-result"), sampleNote: $("sample-note"), version: $("version"), toast: $("toast"),
+  debug: $("debug"), debugControls: $("debug-controls"), stepInsn: $("step-insn"), stepLine: $("step-line"), stepFrame: $("step-frame"),
+  stepGo: $("step-go"), debugRestart: $("debug-restart"), debugQuit: $("debug-quit"),
+  vmPane: $("vm-pane"), vmBody: $("vm-body"), vmTabs: $("vm-tabs"), vmNote: $("vm-note"), dumpNote: $("dump-note"), opcodeTip: $("opcode-tip"),
 };
 
 // ---------------------------------------------------------------- editor
@@ -45,6 +50,23 @@ const highlight = HighlightStyle.define([
   { tag: [tags.variableName, tags.propertyName], color: "var(--hl-variable)" },
 ]);
 
+const readOnly = new Compartment();
+const setVmLine = StateEffect.define();
+const vmLine = Decoration.line({ class: "cm-currentVmLine" });
+const vmLineField = StateField.define({
+  create: () => Decoration.none,
+  update(value, tr) {
+    value = value.map(tr.changes);
+    for (const e of tr.effects) {
+      if (!e.is(setVmLine)) continue;
+      const n = e.value;
+      value = n && n >= 1 && n <= tr.state.doc.lines ? Decoration.set([vmLine.range(tr.state.doc.line(n).from)]) : Decoration.none;
+    }
+    return value;
+  },
+  provide: (f) => EditorView.decorations.from(f),
+});
+
 const editor = new EditorView({
   parent: $("editor"),
   state: EditorState.create({
@@ -55,11 +77,15 @@ const editor = new EditorView({
       StreamLanguage.define(ruby),
       syntaxHighlighting(highlight),
       keymap.of([{ key: "Mod-Enter", run: () => { run(); return true; } }, indentWithTab]),
+      vmLineField,
+      readOnly.of(EditorState.readOnly.of(false)),
       EditorView.updateListener.of((u) => { if (u.docChanged) onEdit(); }),
     ],
   }),
 });
 const source = () => editor.state.doc.toString();
+const setEditable = (on) => editor.dispatch({ effects: readOnly.reconfigure(EditorState.readOnly.of(!on)) });
+const showVmLine = (n) => editor.dispatch({ effects: setVmLine.of(n || null) });
 function setSource(text) {
   editor.dispatch({ changes: { from: 0, to: editor.state.doc.length, insert: text } });
 }
@@ -111,19 +137,34 @@ function onMessage(m) {
       break;
     case "inspect":
       if (m.id !== inspectId) break; // an older request; a newer one is on its way
+      if (debugging) break;          // the listing belongs to the program being debugged
       ui.ast.textContent = m.ast;
-      ui.dump.textContent = m.dump;
       ui.dump.classList.toggle("note", !m.ok);
+      if (m.ok && m.dumpJson && !m.dumpJson.error) {
+        vm.dump = m.dumpJson;
+        renderDump(ui.dump, m.dumpJson); // rows, so an opcode can be looked up
+      } else {
+        vm.dump = null;
+        ui.dump.textContent = m.dump;
+      }
+      break;
+    case "debug":
+      onDebug(m);
+      break;
+    case "op-counts":
+      vm.opCounts = m.counts;
+      if (vmTab === "ops") renderVm(ui.vmBody, vmTab, vm);
       break;
     case "crash":
       appendError(`VM が停止しました: ${m.text}`);
+      if (debugging) leaveDebug();
       restart("VM を作り直しました");
       break;
   }
 }
 
 function run() {
-  if (!ready || running) return;
+  if (!ready || running || debugging) return;
   running = true;
   ui.run.disabled = true;
   ui.stop.disabled = false;
@@ -159,6 +200,7 @@ function finishRun(m) {
 function restart(message) {
   worker.terminate();
   running = false;
+  if (debugging) leaveDebug();
   ui.run.disabled = true;
   ui.stop.disabled = true;
   startWorker();
@@ -171,6 +213,154 @@ function stop() {
   appendNote("\n（停止しました）");
   restart("停止しました。VM を作り直しています…");
 }
+
+// ---------------------------------------------------------------- debugging
+// The worker holds the VM; this side keeps what the panes draw from (web/debug.js).
+
+let debugging = false, debugBusy = false, vmTab = "frames";
+const vm = {
+  state: null, dump: null, trace: [], recent: [], opCounts: [], selectedFrame: null,
+  onSelectFrame: (index) => { vm.selectedFrame = index; renderVm(ui.vmBody, vmTab, vm); },
+  onGc: () => sendDebug({ type: "debug-gc", collect: true }),
+  onStress: (on) => sendDebug({ type: "debug-gc", stress: on }),
+};
+
+function sendDebug(message) {
+  if (!debugging || debugBusy) return;
+  debugBusy = true;
+  setStepButtons(false);
+  worker.postMessage(message);
+}
+
+function setStepButtons(on) {
+  for (const b of [ui.stepInsn, ui.stepLine, ui.stepFrame, ui.stepGo]) b.disabled = !on;
+}
+
+function startDebug() {
+  if (!ready || running) return;
+  debugging = true;
+  ui.debug.setAttribute("aria-pressed", "true");
+  ui.debugControls.hidden = false;
+  ui.vmPane.hidden = false;
+  ui.run.disabled = true;
+  ui.stop.disabled = true;
+  setEditable(false);
+  ui.output.textContent = "";
+  decoder = new TextDecoder("utf-8", { fatal: false });
+  outLen = 0; truncated = false; lastOutput = "";
+  lastRunSource = source();
+  hideCompare();
+  Object.assign(vm, { state: null, trace: [], recent: [], opCounts: [], selectedFrame: null });
+  debugBusy = true;
+  setStepButtons(false);
+  setStatus("デバッグの準備をしています…", true);
+  worker.postMessage({ type: "debug-start", src: lastRunSource });
+  if (current && current.note && source() === current.text) toast(`見どころ: ${current.note}`);
+}
+
+/** Puts the page back the way it was; the VM itself is reset by the worker. */
+function leaveDebug() {
+  debugging = false;
+  debugBusy = false;
+  ui.debug.setAttribute("aria-pressed", "false");
+  ui.debugControls.hidden = true;
+  ui.vmPane.hidden = true;
+  ui.run.disabled = !ready;
+  setEditable(true);
+  showVmLine(null);
+  highlightDump(ui.dump, null, 0);
+  ui.dumpNote.textContent = "sabiruby dump の形式";
+}
+
+function stopDebug() {
+  if (!debugging) return;
+  worker.postMessage({ type: "debug-stop" });
+  leaveDebug();
+  setStatus("デバッグを終了しました");
+  requestInspect();
+}
+
+function onDebug(m) {
+  if (m.phase === "stopped") return;
+  if (m.phase === "compile_error") {
+    appendError(m.text);
+    leaveDebug();
+    setStatus("コンパイルエラー");
+    return;
+  }
+  if (m.phase === "started") {
+    vm.dump = m.dump;
+    renderDump(ui.dump, m.dump);
+  }
+  debugBusy = false;
+  if (m.state && m.state.contexts) vm.state = m.state;
+  if (m.trace && m.trace.length) {
+    vm.recent = m.trace;
+    vm.trace = vm.trace.concat(m.trace).slice(-5000);
+  } else if (m.phase !== "started") {
+    vm.recent = [];
+  }
+  const frames = currentFrames();
+  if (!frames.some((f) => f.index === vm.selectedFrame)) vm.selectedFrame = frames.length ? frames[frames.length - 1].index : null;
+  drawVm();
+
+  const done = m.phase === "finished" || m.phase === "error";
+  setStepButtons(!done);
+  if (m.phase === "started") {
+    setStatus("最初の命令の手前で止まっています。「1 行」「1 命令」で進みます。");
+  } else if (m.phase === "paused") {
+    setStatus(`停止中 · ${fmtStats(m.stats)}`);
+  } else if (m.phase === "finished") {
+    appendOutput(decoder.decode());
+    if (!ui.output.textContent) ui.output.innerHTML = '<span class="note">（出力なし）</span>';
+    setStatus(`完了 · ${fmtStats(m.stats)}`);
+    worker.postMessage({ type: "op-counts" });
+  } else if (m.phase === "error") {
+    appendOutput(decoder.decode());
+    appendError(m.text);
+    setStatus(`例外で終了 · ${fmtStats(m.stats)}`);
+    worker.postMessage({ type: "op-counts" });
+  }
+}
+
+const currentFrames = () => (vm.state && vm.state.contexts && vm.state.contexts.length ? vm.state.contexts[vm.state.cur].frames : []);
+
+function drawVm() {
+  const offset = vm.dump ? vm.dump.offset : 0;
+  const note = highlightDump(ui.dump, vm.state, offset);
+  ui.dumpNote.textContent = note || "実行中の命令を強調しています";
+  const frames = currentFrames();
+  const top = frames[frames.length - 1];
+  showVmLine(top && top.irep >= offset ? top.line : null);
+  ui.vmNote.textContent = vm.state ? `${vm.state.instructions.toLocaleString()} 命令 · 生存 ${vm.state.heap.live.toLocaleString()}` : "";
+  renderVm(ui.vmBody, vmTab, vm);
+}
+
+ui.debug.addEventListener("click", () => (debugging ? stopDebug() : startDebug()));
+ui.debugQuit.addEventListener("click", stopDebug);
+ui.debugRestart.addEventListener("click", () => { if (debugging) { leaveDebug(); startDebug(); } });
+ui.stepInsn.addEventListener("click", () => sendDebug({ type: "debug-step", mode: STEP_INSN }));
+ui.stepLine.addEventListener("click", () => sendDebug({ type: "debug-step", mode: STEP_LINE }));
+ui.stepFrame.addEventListener("click", () => sendDebug({ type: "debug-step", mode: STEP_FRAME }));
+ui.stepGo.addEventListener("click", () => { setStatus("実行中…", true); sendDebug({ type: "debug-step", mode: STEP_BUDGET }); });
+
+ui.vmTabs.addEventListener("click", (e) => {
+  const button = e.target.closest("button[data-tab]");
+  if (!button) return;
+  vmTab = button.dataset.tab;
+  for (const b of ui.vmTabs.querySelectorAll("button")) b.setAttribute("aria-selected", String(b === button));
+  renderVm(ui.vmBody, vmTab, vm);
+});
+
+document.addEventListener("keydown", (e) => {
+  if (!debugging || e.ctrlKey || e.metaKey || e.altKey) return;
+  const key = { F10: ui.stepLine, F11: ui.stepInsn, F5: ui.stepGo }[e.key];
+  if (!key || key.disabled) return;
+  e.preventDefault();
+  key.click();
+});
+
+initOpcodeTips(ui.opcodeTip, ui.dump, ui.vmBody);
 
 // ---------------------------------------------------------------- output
 
@@ -250,10 +440,11 @@ ui.sample.addEventListener("change", async () => {
   if (!name) return;
   const s = (kind === "f" ? samples.fixtures : samples.book).find((x) => x.name === name);
   const text = await (await fetch(s.path)).text();
-  current = { name, text, expected: s.expected };
+  if (debugging) stopDebug();
+  current = { name, text, expected: s.expected, note: s.note };
   setSource(text);
   history.replaceState(null, "", location.pathname + location.search);
-  ui.sampleNote.textContent = kind === "f" ? `${name}.rb · 本家の出力と比較できます` : `${name}.rb · 本の例`;
+  ui.sampleNote.textContent = kind === "f" ? `${name}.rb · 本家の出力と比較できます` : `${name}.rb · 本の例${s.note ? " · 見どころあり" : ""}`;
   hideCompare();
   ui.output.textContent = "";
   setStatus(kind === "f" ? "「実行」のあと、本家 mruby の出力と比べられます" : "準備完了");

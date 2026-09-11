@@ -20,13 +20,18 @@ the page is static (GitHub Pages) and everything runs in a Web Worker.
 * The samples are SabiRuby's reference fixtures, each with the reference mruby's stdout:
   **Compare with mruby** checks the playground's output against it, byte for byte. The book's
   example scripts (*Deep dive into mruby*, via the mruby porting kit) are there too.
+* **デバッグ** steps the VM one instruction, one line or one call at a time and shows what is
+  normally invisible: the call stack with named registers, the environments a closure leaves
+  behind, the catch tables a `raise` walks, the fibers, the heap and the GC, and a histogram of
+  the executed opcodes. Hovering an opcode shows its definition and summary. This is what the
+  reference mruby on wasm cannot do without patching `vm.c`; see `docs/ideas.md`.
 * **Share link** puts the code (up to 8 KB) into the URL.
 
 ## Numbers
 
 | | |
 |---|---|
-| `sabiruby.wasm` as deployed | 1,169,017 bytes, 421,881 over gzip (GitHub Pages compresses it); with the AST pane, 1,233,982 bytes (421,485 gzipped, local build) |
+| `sabiruby.wasm` as deployed | 1,304,581 bytes, 438,274 over gzip (GitHub Pages compresses it); 1,233,982 / 421,485 before the debugger, 1,169,017 / 421,881 before the AST pane |
 | page ready on the deployed site, fresh browser (navigation start to the Run button enabled: fonts, CodeMirror, the module, the worker, the VM) | 0.43–1.45 s (headless Chromium, two runs, 2026-09-12) |
 | the same from a local server | about 0.37 s |
 | instantiate the module and create the VM with mrblib | 15 ms (Node) |
@@ -44,16 +49,19 @@ headless Chromium only.
 
 ```
 wasm/        crate sabiruby-wasm (cdylib, wasm32-wasip1): the C ABI below, over sabiruby + sabiruby-compiler
-web/         the static site: index.html, main.js (UI), worker.js (runs the VM), sabi.js (wrapper of the C ABI)
+web/         the static site: index.html, main.js (UI), debug.js (the debugger's panes), worker.js (runs the VM), sabi.js (wrapper of the C ABI)
+  opcodes.json  the opcode reference shown on hover (from the mruby porting kit's dataset)
   vendor/    browser_wasi_shim (WASI imports in the browser), CodeMirror 6 (one esbuild bundle)
   samples/   fixtures (with .out) and the book's examples; index.json
-tools/       build.sh (wasm), samples.sh (copies the samples), codemirror/ (rebuilds the bundle)
+tools/       build.sh (wasm), samples.sh (copies the samples), opcodes.sh (web/opcodes.json), samples/ (this repository's own samples), codemirror/ (rebuilds the bundle)
 test/        fixtures.mjs, api.mjs (Node), browser.mjs (Playwright + Chromium)
 ```
 
 The module is a WASI reactor with a C ABI (no wasm-bindgen): `sabi_compile`, `sabi_load`,
 `sabi_reset`, `sabi_start`, `sabi_step(budget)`, `sabi_take_output`, `sabi_take_text`,
-`sabi_dump`, `sabi_ast`, `sabi_stats`, `sabi_alloc`/`sabi_free`, `sabi_version`. It imports only
+`sabi_dump`, `sabi_ast`, `sabi_stats`, `sabi_alloc`/`sabi_free`, `sabi_version`, and for the
+debugger `sabi_trace`, `sabi_step_until`, `sabi_state`, `sabi_take_trace`, `sabi_gc_collect`,
+`sabi_gc_stress`, `sabi_op_counts`, `sabi_dump_json`. It imports only
 `wasi_snapshot_preview1` functions for stdio and the environment (the VM needs no clock and no
 randomness); in the browser they come from browser_wasi_shim. The page compiles the module
 once and hands the `WebAssembly.Module` to each new worker. Design notes:
@@ -79,7 +87,7 @@ npx playwright-core install chromium && npm run test:browser
 
 | what | version |
 |---|---|
-| SabiRuby | commit `d0d9e80` of kishima/sabiruby (`sabiruby` 0.2.0 + `sabiruby-compiler` with the wasm build and the feature `ast`) |
+| SabiRuby | commit `bbd0e58` of kishima/sabiruby (`sabiruby` 0.2.0 with `src/inspect.rs` and the DBG line numbers + `sabiruby-compiler` with the wasm build and the feature `ast`) |
 | mruby compiler | 4.1.0-rc (`3cf73ee`), Prism 1.9.0 |
 | wasi-sdk | 34.0 (clang 23) |
 | binaryen (`wasm-opt`) | version_132 |
@@ -91,5 +99,6 @@ npx playwright-core install chromium && npm run test:browser
 ## License
 
 MIT. Vendored: browser_wasi_shim (MIT OR Apache-2.0), CodeMirror (MIT); the samples come from
-SabiRuby (MIT) and the mruby porting kit (MIT); the embedded compiler and mrblib are mruby's
-(MIT) and Prism's (MIT).
+SabiRuby (MIT) and the mruby porting kit (MIT); the opcode descriptions in `web/opcodes.json` are
+the porting kit's `dataset/` (MIT); the embedded compiler and mrblib are mruby's (MIT) and
+Prism's (MIT).

@@ -27,9 +27,18 @@
     </label>
     <button id="run" class="primary" type="button" disabled title="Ctrl+Enter">実行</button>
     <button id="stop" type="button" disabled>停止</button>
+    <button id="debug" type="button" aria-pressed="false" title="命令ごとに止めて VM の中を見ます">デバッグ</button>
     <button id="toggle-ast" type="button" aria-pressed="true">AST</button>
     <button id="toggle-dump" type="button" aria-pressed="true">バイトコード</button>
     <button id="share" type="button">共有リンク</button>
+  </div>
+  <div class="controls debug-controls" id="debug-controls" hidden>
+    <button id="step-line" class="primary" type="button" title="F10">1 行</button>
+    <button id="step-insn" type="button" title="F11">1 命令</button>
+    <button id="step-frame" type="button">呼び出し／戻り</button>
+    <button id="step-go" type="button" title="F5">続行</button>
+    <button id="debug-restart" type="button">最初から</button>
+    <button id="debug-quit" type="button">デバッグ終了</button>
   </div>
 </header>
 
@@ -53,7 +62,7 @@
   <section class="pane dump-pane" id="dump-pane" aria-label="バイトコード">
     <div class="pane-head">
       <h2><span class="step">3</span>バイトコード</h2>
-      <span class="pane-note">sabiruby dump の形式</span>
+      <span class="pane-note" id="dump-note">sabiruby dump の形式</span>
     </div>
     <pre id="dump" class="output tree"></pre>
   </section>
@@ -69,16 +78,34 @@
     <pre id="output" class="output" aria-live="polite"></pre>
     <div class="status" id="status">wasm を読み込んでいます…</div>
   </section>
+  <section class="pane vm-pane" id="vm-pane" aria-label="VM の状態" hidden>
+    <div class="pane-head">
+      <h2><span class="step">5</span>VM の状態</h2>
+      <span class="pane-note" id="vm-note"></span>
+    </div>
+    <div class="tabs" id="vm-tabs" role="tablist">
+      <button type="button" role="tab" data-tab="frames" aria-selected="true">フレーム</button>
+      <button type="button" role="tab" data-tab="envs" aria-selected="false">環境</button>
+      <button type="button" role="tab" data-tab="exc" aria-selected="false">例外</button>
+      <button type="button" role="tab" data-tab="fibers" aria-selected="false">Fiber</button>
+      <button type="button" role="tab" data-tab="gc" aria-selected="false">GC</button>
+      <button type="button" role="tab" data-tab="ops" aria-selected="false">命令</button>
+    </div>
+    <div class="vm-body" id="vm-body"></div>
+  </section>
+
 </main>
 
 <footer class="foot">
   <span id="version">…</span>
   <span>パーサーは Prism </span>
+  <span>命令の説明は <a href="https://github.com/kishima/mruby-porting-kit">mruby-porting-kit</a> の dataset（MIT）</span>
   <a href="https://github.com/kishima/sabiruby">SabiRuby</a>
   <a href="https://github.com/kishima/sabiruby-playground">ソース</a>
 </footer>
 
 <div id="toast" class="toast" role="status" hidden></div>
+<div id="opcode-tip" class="tip" role="tooltip" hidden></div>
 
 <script type="module" src="main.js"></script>
 </body>
