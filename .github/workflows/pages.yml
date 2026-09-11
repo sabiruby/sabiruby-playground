@@ -1,0 +1,65 @@
+name: pages
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+env:
+  # the SabiRuby commit the playground is built from (VM + compiler); bump deliberately
+  SABIRUBY_REF: 1007e3a
+  WASI_SDK: "34"
+  BINARYEN: "132"
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: sabiruby-playground
+      - uses: actions/checkout@v4
+        with:
+          repository: kishima/sabiruby
+          ref: ${{ env.SABIRUBY_REF }}
+          path: sabiruby
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-wasip1
+      - name: wasi-sdk and binaryen
+        run: |
+          curl -sSL "https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-${WASI_SDK}/wasi-sdk-${WASI_SDK}.0-x86_64-linux.tar.gz" | tar xz -C "$RUNNER_TEMP"
+          echo "WASI_SDK_PATH=$RUNNER_TEMP/wasi-sdk-${WASI_SDK}.0-x86_64-linux" >> "$GITHUB_ENV"
+          curl -sSL "https://github.com/WebAssembly/binaryen/releases/download/version_${BINARYEN}/binaryen-version_${BINARYEN}-x86_64-linux.tar.gz" | tar xz -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/binaryen-version_${BINARYEN}/bin" >> "$GITHUB_PATH"
+      - name: build web/sabiruby.wasm
+        working-directory: sabiruby-playground
+        run: tools/build.sh
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: tests (Node, then the page in headless Chromium)
+        working-directory: sabiruby-playground
+        run: |
+          npm ci
+          npm test
+          npx playwright-core install --with-deps chromium
+          npm run test:browser
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: sabiruby-playground/web
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SabiRuby Playground</title>
+<meta name="description" content="mruby 4.1 のコンパイラと Rust 製 VM の SabiRuby を WebAssembly でブラウザ上に。Ruby を書いて実行し、バイトコードも見られます。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 3 29 12 16 29 3 12Z' fill='%239A3F17'/%3E%3Cpath d='M3 12h26M16 3l-5 9 5 17 5-17z' fill='none' stroke='%23F1F3F4' stroke-width='1.4'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+JP:wght@400;500;600&family=Zen+Kaku+Gothic+New:wght@700&display=swap">
+<link rel="stylesheet" href="style.css">
+<link rel="modulepreload" href="sabi.js">
+</head>
+<body>
+<header class="bar">
+  <div class="brand">
+    <h1>SabiRuby <span>Playground</span></h1>
+    <p class="tagline">mruby 4.1 のコンパイラと Rust 製 VM を、WebAssembly でブラウザの中に</p>
+  </div>
+  <div class="controls">
+    <label class="sample">
+      <span class="visually-hidden">サンプル</span>
+      <select id="sample" aria-label="サンプルを選ぶ">
+        <option value="">サンプルを選ぶ…</option>
+      </select>
+    </label>
+    <button id="run" class="primary" type="button" disabled title="Ctrl+Enter">実行</button>
+    <button id="stop" type="button" disabled>停止</button>
+    <button id="toggle-dump" type="button" aria-pressed="false">バイトコード</button>
+    <button id="share" type="button">共有リンク</button>
+  </div>
+</header>
+
+<main class="panes" id="panes">
+  <section class="pane editor-pane" aria-label="Ruby のコード">
+    <div class="pane-head">
+      <h2>コード</h2>
+      <span class="pane-note" id="sample-note"></span>
+    </div>
+    <div id="editor" class="editor"></div>
+  </section>
+
+  <section class="pane output-pane" aria-label="実行結果">
+    <div class="pane-head">
+      <h2>出力</h2>
+      <div class="compare">
+        <button id="compare" type="button" hidden>本家 mruby の出力と比較</button>
+        <span id="compare-result" class="chip" hidden></span>
+      </div>
+    </div>
+    <pre id="output" class="output" aria-live="polite"></pre>
+    <div class="status" id="status">wasm を読み込んでいます…</div>
+  </section>
+
+  <section class="pane dump-pane" id="dump-pane" aria-label="バイトコード" hidden>
+    <div class="pane-head">
+      <h2>バイトコード</h2>
+      <span class="pane-note">sabiruby dump の形式（mrbc --verbose に倣った命令一覧）</span>
+    </div>
+    <pre id="dump" class="output dump"></pre>
+  </section>
+</main>
+
+<footer class="foot">
+  <span id="version">…</span>
+  <span>コンパイラは本家 mruby 4.1.0-rc（Prism）そのもの。出力は mrbc とバイト単位で同じ。</span>
+  <a href="https://github.com/kishima/sabiruby">SabiRuby</a>
+  <a href="https://github.com/kishima/sabiruby-playground">ソース</a>
+</footer>
+
+<div id="toast" class="toast" role="status" hidden></div>
+
+<script type="module" src="main.js"></script>
+</body>
+</html>

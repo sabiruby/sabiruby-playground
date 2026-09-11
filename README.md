@@ -1,0 +1,92 @@
+# SabiRuby Playground
+
+Write Ruby in the browser and run it with **mruby 4.1's own compiler** and the
+[SabiRuby](https://github.com/kishima/sabiruby) VM, both compiled to WebAssembly. No server:
+the page is static (GitHub Pages) and everything runs in a Web Worker.
+
+**https://kishima.github.io/sabiruby-playground/**
+
+* The compiler is the reference one, not a port: mruby 4.1.0-rc's `mruby-compiler` (Prism
+  1.9.0 + mruby's code generator), C built with wasi-sdk
+  ([`sabiruby-compiler`](https://crates.io/crates/sabiruby-compiler)). Its bytecode is
+  byte-identical to `mrbc`'s.
+* The VM is [`sabiruby`](https://crates.io/crates/sabiruby), pure Rust, with its garbage
+  collector; the program runs in steps of 1,000,000 instructions, so an endless loop does not
+  freeze the page and **Stop** terminates the worker at once.
+* The **Bytecode** pane lists the instructions (`sabiruby dump`, modelled on
+  `mrbc --verbose`), next to the output.
+* The samples are SabiRuby's reference fixtures, each with the reference mruby's stdout:
+  **Compare with mruby** checks the playground's output against it, byte for byte. The book's
+  example scripts (*Deep dive into mruby*, via the mruby porting kit) are there too.
+* **Share link** puts the code (up to 8 KB) into the URL.
+
+## Numbers
+
+| | |
+|---|---|
+| `sabiruby.wasm` | 1,165,312 bytes (413,230 gzipped), after `wasm-opt -Oz` |
+| fetch + compile the module + create the VM with mrblib | 33 ms (headless Chromium, served locally) |
+| page ready (fonts, CodeMirror, worker, VM) | about 370 ms (same) |
+| a fixture run | 1–70 ms (Node; `test/fixtures.mjs` prints each) |
+
+Numbers from a local server; over the network the 413 KB download comes first.
+
+## Browsers
+
+Needs WebAssembly with **exception handling** (legacy encoding; the compiler's `setjmp`/`longjmp`
+use it) and module workers: Chrome/Edge 95+, Firefox 114+, Safari 15.2+. Tested in CI with
+headless Chromium only.
+
+## How it is built
+
+```
+wasm/        crate sabiruby-wasm (cdylib, wasm32-wasip1): the C ABI below, over sabiruby + sabiruby-compiler
+web/         the static site: index.html, main.js (UI), worker.js (runs the VM), sabi.js (wrapper of the C ABI)
+  vendor/    browser_wasi_shim (WASI imports in the browser), CodeMirror 6 (one esbuild bundle)
+  samples/   fixtures (with .out) and the book's examples; index.json
+tools/       build.sh (wasm), samples.sh (copies the samples), codemirror/ (rebuilds the bundle)
+test/        fixtures.mjs, api.mjs (Node), browser.mjs (Playwright + Chromium)
+```
+
+The module is a WASI reactor with a C ABI (no wasm-bindgen): `sabi_compile`, `sabi_load`,
+`sabi_reset`, `sabi_start`, `sabi_step(budget)`, `sabi_take_output`, `sabi_take_text`,
+`sabi_dump`, `sabi_stats`, `sabi_alloc`/`sabi_free`, `sabi_version`. It imports only
+`wasi_snapshot_preview1` functions for stdio and the environment (the VM needs no clock and no
+randomness); in the browser they come from browser_wasi_shim. The page compiles the module
+once and hands the `WebAssembly.Module` to each new worker. Design notes:
+[`docs/playground.md`](https://github.com/kishima/sabiruby/blob/main/docs/playground.md) in the
+SabiRuby repository.
+
+### Building locally
+
+The `sabiruby` repository must be checked out next to this one (`../sabiruby`); `wasm/` depends
+on it by path (CI does the same checkout, at the commit in `.github/workflows/pages.yml`).
+
+```
+rustup target add wasm32-wasip1
+# wasi-sdk 34 (https://github.com/WebAssembly/wasi-sdk/releases), e.g. unpacked to /opt/wasi-sdk
+# binaryen (wasm-opt) on PATH, optional
+WASI_SDK_PATH=/opt/wasi-sdk tools/build.sh
+python3 -m http.server -d web 8000         # then open http://localhost:8000/
+npm ci && npm test                         # Node: all fixtures + API checks
+npx playwright-core install chromium && npm run test:browser
+```
+
+## Pinned versions
+
+| what | version |
+|---|---|
+| SabiRuby | commit `1007e3a` of kishima/sabiruby (`sabiruby` 0.2.0 + `sabiruby-compiler` with the wasm build) |
+| mruby compiler | 4.1.0-rc (`3cf73ee`), Prism 1.9.0 |
+| wasi-sdk | 34.0 (clang 23) |
+| binaryen (`wasm-opt`) | version_132 |
+| Rust | stable, target `wasm32-wasip1` |
+| browser_wasi_shim | 0.4.2 (`web/vendor/browser_wasi_shim/VERSION`) |
+| CodeMirror | codemirror 6.0.2, @codemirror/view 6.43.11, state 6.7.4, language 6.12.4, legacy-modes 6.5.4 (full list: `web/vendor/codemirror/VERSION`) |
+| Playwright (tests) | playwright-core 1.63.0 |
+
+## License
+
+MIT. Vendored: browser_wasi_shim (MIT OR Apache-2.0), CodeMirror (MIT); the samples come from
+SabiRuby (MIT) and the mruby porting kit (MIT); the embedded compiler and mrblib are mruby's
+(MIT) and Prism's (MIT).
