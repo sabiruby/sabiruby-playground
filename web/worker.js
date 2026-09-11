@@ -2,7 +2,7 @@
 // ("init"), then "run" / "inspect" / "debug-*" requests. Stopping a run is the page's worker.terminate():
 // it works even in the middle of a step, and the page starts a fresh worker from the same module.
 
-import { Sabi, OK, PAUSED, FINISHED, STEP_BUDGET } from "./sabi.js";
+import { Sabi, OK, PAUSED, FINISHED, STEP_CONTINUE } from "./sabi.js";
 
 const BUDGET = 1_000_000; // instructions per step; output and progress go out between steps
 let sabi;
@@ -62,13 +62,13 @@ function debugStart(src) {
   post({ type: "debug", phase: "started", dump: sabi.dumpJson(), state: sabi.state(), trace: [], stats: sabi.stats() });
 }
 
-/** One step of the chosen kind; `STEP_BUDGET` runs on like the Run button. */
+/** One step of the chosen kind; `STEP_CONTINUE` runs on like the Run button. */
 function debugStep(mode, budget) {
   const t0 = performance.now();
   let r;
-  if (mode === STEP_BUDGET) {
+  if (mode === STEP_CONTINUE) {
     let last = t0;
-    while ((r = sabi.stepUntil(STEP_BUDGET, budget || BUDGET)) === PAUSED) {
+    while ((r = sabi.stepUntil(STEP_CONTINUE, budget || BUDGET)) === PAUSED) {
       flush();
       const now = performance.now();
       if (now - last > 200) { post({ type: "progress", stats: sabi.stats(), ms: now - t0 }); last = now; }

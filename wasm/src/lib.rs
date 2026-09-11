@@ -218,14 +218,15 @@ pub extern "C" fn sabi_trace(on: u32) {
     with(|st| { st.trace = on != 0; if let Some(vm) = st.vm.as_mut() { vm.set_trace(on != 0); } });
 }
 
-/// Runs until something happens: `mode` 0 one instruction, 1 the source line changes (or the
-/// program enters or leaves a frame), 2 a frame is entered or left, 3 `budget` instructions.
-/// `budget` also bounds modes 1 and 2. Same result as `sabi_step`.
+/// Runs until something happens, as a debugger's step buttons do: `mode` 0 one instruction,
+/// 1 step over (the next line of this frame; calls run without stopping inside them), 2 step into
+/// (the next line, or the moment a frame is entered or left), 3 step out (this frame returns),
+/// 4 `budget` instructions (Continue). `budget` bounds every mode. Same result as `sabi_step`.
 #[unsafe(no_mangle)]
 pub extern "C" fn sabi_step_until(mode: u32, budget: u32) -> u32 {
     with(|st| {
         let Some(vm) = st.vm.as_mut() else { st.text = b"no program started".to_vec(); return INTERNAL_ERROR };
-        if mode == 3 {
+        if mode == 4 {
             return match vm.step(budget as u64) {
                 Ok(Step::Paused) => 0,
                 Ok(Step::Finished(_)) => 1,
@@ -240,10 +241,15 @@ pub extern "C" fn sabi_step_until(mode: u32, budget: u32) -> u32 {
                 Err(e) => { st.text = vm.describe_error(&e).into_bytes(); return RUNTIME_ERROR }
             }
             let depth = vm.ci.len();
-            let changed_frame = depth != depth0;
-            if mode == 0 { return 0; }
-            if mode == 2 && changed_frame { return 0; }
-            if mode == 1 && (changed_frame || (vm.current_line().is_some() && vm.current_line() != line0)) { return 0; }
+            let line = vm.current_line();
+            let line_changed = line.is_some() && line != line0;
+            let stop = match mode {
+                0 => true,                                            // one instruction
+                1 => depth < depth0 || (depth == depth0 && line_changed), // step over: deeper frames run on
+                3 => depth < depth0,                                  // step out: until this frame returns
+                _ => depth != depth0 || line_changed,                 // step into
+            };
+            if stop { return 0; }
         }
         0
     })

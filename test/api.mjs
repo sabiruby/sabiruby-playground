@@ -3,7 +3,7 @@
 import { readFile } from "node:fs/promises";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
-import { Sabi, OK, COMPILE_ERROR, RUNTIME_ERROR, PAUSED, FINISHED, STEP_INSN, STEP_LINE, STEP_FRAME, decoder } from "../web/sabi.js";
+import { Sabi, OK, COMPILE_ERROR, RUNTIME_ERROR, PAUSED, FINISHED, STEP_INSTRUCTION, STEP_OVER, STEP_INTO, STEP_OUT, STEP_CONTINUE, decoder } from "../web/sabi.js";
 
 const web = fileURLToPath(new URL("../web/", import.meta.url));
 const sabi = await Sabi.create(await readFile(web + "sabiruby.wasm"));
@@ -90,7 +90,7 @@ const checks = {
   // ---- the debugger's paths (wasm/src/json.rs, src/inspect.rs of the VM)
   "state() describes the frames and names the registers": () => {
     debugStart("x = 1\ny = x + 1\np y\n");
-    assert.equal(sabi.stepUntil(STEP_LINE), PAUSED);
+    assert.equal(sabi.stepUntil(STEP_OVER), PAUSED);
     const s = sabi.state();
     const f = s.contexts[s.cur].frames[0];
     assert.equal(f.regs[0].text, "main", JSON.stringify(f.regs)); // regs carry the value inline
@@ -100,30 +100,46 @@ const checks = {
     assert.ok(s.heap.live > 0 && s.heap.free === s.heap.len - s.heap.live);
     assert.equal(s.pending_exc, null);
   },
-  "stepUntil(STEP_LINE) moves to the next line, STEP_INSN one instruction": () => {
+  "stepUntil(STEP_OVER) moves to the next line, STEP_INSTRUCTION one instruction": () => {
     debugStart("a = 1\nb = 2\nc = 3\n");
     const line = () => sabi.state(1).contexts[0].frames[0].line;
     const first = line();
-    assert.equal(sabi.stepUntil(STEP_LINE), PAUSED);
+    assert.equal(sabi.stepUntil(STEP_OVER), PAUSED);
     assert.ok(line() > first, `${first} -> ${line()}`);
     const before = sabi.stats().instructions;
-    assert.equal(sabi.stepUntil(STEP_INSN), PAUSED);
+    assert.equal(sabi.stepUntil(STEP_INSTRUCTION), PAUSED);
     assert.equal(sabi.stats().instructions, before + 1);
   },
-  "stepUntil(STEP_FRAME) stops where a method is entered": () => {
-    debugStart("def f(n) = n + 1\np f(1)\n");
-    let depth = 1;
-    for (let k = 0; k < 40 && depth < 2; k++) {
-      if (sabi.stepUntil(STEP_FRAME) !== PAUSED) break;
-      depth = sabi.state(1).contexts[0].frames.length;
+  "STEP_OVER runs a call without stopping inside it, STEP_INTO stops in the callee": () => {
+    const depth = () => sabi.state(1).contexts[0].frames.length;
+    // step over: the line with the call is one step, and the frame stays as deep as it was
+    debugStart("def f(n) = n + 1\nx = f(1)\np x\n");
+    for (let k = 0; k < 30 && sabi.state(1).contexts[0].frames[0].line === 1; k++) sabi.stepUntil(STEP_OVER);
+    let seen = 1;
+    for (let k = 0; k < 30; k++) {
+      if (sabi.stepUntil(STEP_OVER) !== PAUSED) break;
+      seen = Math.max(seen, depth());
     }
-    assert.equal(depth, 2, "never entered f");
+    assert.equal(seen, 1, "step over went inside f");
+
+    // step into: the same program stops with f on the stack
+    debugStart("def f(n) = n + 1\nx = f(1)\np x\n");
+    let inside = false;
+    for (let k = 0; k < 60 && !inside; k++) {
+      if (sabi.stepUntil(STEP_INTO) !== PAUSED) break;
+      inside = depth() > 1;
+    }
+    assert.ok(inside, "step into never entered f");
     assert.equal(sabi.state(2).contexts[0].frames[1].mid, "f");
+
+    // step out: back to the caller
+    assert.equal(sabi.stepUntil(STEP_OUT), PAUSED);
+    assert.equal(depth(), 1, "step out did not return to the caller");
   },
   "a closure's trace has EnvCreate and EnvDetach": () => {
     debugStart("def mk\n  n = 0\n  -> { n += 1 }\nend\nc = mk\np c.call\n");
     let r;
-    while ((r = sabi.stepUntil(STEP_LINE)) === PAUSED) { /* to the end */ }
+    while ((r = sabi.stepUntil(STEP_OVER)) === PAUSED) { /* to the end */ }
     assert.equal(r, FINISHED, sabi.text());
     const t = sabi.takeTrace();
     const kinds = t.map((e) => e.kind);
@@ -134,7 +150,7 @@ const checks = {
   },
   "a raise records the catch table lookups": () => {
     debugStart("begin\n  raise 'boom'\nrescue => e\n  p e.message\nend\n");
-    while (sabi.stepUntil(STEP_LINE) === PAUSED) { /* to the end */ }
+    while (sabi.stepUntil(STEP_OVER) === PAUSED) { /* to the end */ }
     const t = sabi.takeTrace();
     const raise = t.findIndex((e) => e.kind === "raise");
     assert.ok(raise >= 0, JSON.stringify(t.map((e) => e.kind)));
@@ -144,7 +160,7 @@ const checks = {
   "gcCollect and gcStress report through the heap view": () => {
     debugStart("1000.times { [1, 2, 3] }\n");
     sabi.gcStress(false);
-    while (sabi.stepUntil(3, 100_000) === PAUSED) { /* to the end */ }
+    while (sabi.stepUntil(STEP_CONTINUE, 100_000) === PAUSED) { /* to the end */ }
     sabi.takeTrace();
     const before = sabi.state().heap.live;
     sabi.gcCollect();

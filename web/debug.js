@@ -1,4 +1,4 @@
-// The debugger's views: the structured bytecode listing, the "VM の状態" tabs and the opcode
+// The debugger's views: the structured bytecode listing, the "VM インスペクタ" tabs and the opcode
 // tooltip. Everything here draws from the JSON the VM hands out (wasm/src/json.rs): `state`
 // (Vm::snapshot), `trace` (Vm::take_trace), `dump` (the instruction listing) and `opCounts`.
 // main.js owns the worker and the editor; this file only turns those objects into DOM.
@@ -85,7 +85,7 @@ function currentInsn(model) {
   return ir ? ir.insns.find((i) => i.pc === f.pc) || null : null;
 }
 
-// ---------------------------------------------------------------- the "VM の状態" tabs
+// ---------------------------------------------------------------- the "VM インスペクタ" tabs
 
 const TABS = { frames: framesTab, envs: envsTab, exc: excTab, fibers: fibersTab, gc: gcTab, ops: opsTab };
 

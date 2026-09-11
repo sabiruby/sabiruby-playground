@@ -163,7 +163,7 @@
   {
    "name": "cg_upvar",
    "path": "samples/book/cg_upvar.rb",
-   "note": "バイトコード欄の GETUPVAR と、環境タブの上位環境のたどり方"
+   "note": "バイトコード欄の GETUPVAR と、スコープタブの上位環境のたどり方"
   },
   {
    "name": "cg_while",
@@ -237,7 +237,7 @@
   {
    "name": "vm_closure",
    "path": "samples/book/vm_closure.rb",
-   "note": "環境タブ: mk が返るときに Env がヒープへ移る（detached）"
+   "note": "スコープタブ: mk が返るときに Env がヒープへ移る（detached）"
   },
   {
    "name": "vm_const",

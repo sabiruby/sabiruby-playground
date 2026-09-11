@@ -6,9 +6,11 @@ import { WASI, File, OpenFile, ConsoleStdout } from "./vendor/browser_wasi_shim/
 
 export const OK = 0, COMPILE_ERROR = 1, RUNTIME_ERROR = 2, INTERNAL_ERROR = 3;
 export const PAUSED = 0, FINISHED = 1;
-/** `stepUntil` modes: one instruction, until the line changes, until a frame is entered or left,
- *  or a budget of instructions (what the Run button uses). */
-export const STEP_INSN = 0, STEP_LINE = 1, STEP_FRAME = 2, STEP_BUDGET = 3;
+/** `stepUntil` modes, named as a debugger's step buttons are: one instruction; step over (the
+ *  next line of this frame, calls running without stopping inside them); step into (the next
+ *  line, or entering/leaving a frame); step out (until this frame returns); continue (a budget
+ *  of instructions, what Run uses). */
+export const STEP_INSTRUCTION = 0, STEP_OVER = 1, STEP_INTO = 2, STEP_OUT = 3, STEP_CONTINUE = 4;
 
 const decoder = new TextDecoder("utf-8", { fatal: false }); // Ruby strings are bytes
 const encoder = new TextEncoder();
@@ -77,7 +79,8 @@ export class Sabi {
 
   /** Records what the interpreter does until the next `takeTrace()`. */
   trace(on) { this.x.sabi_trace(on ? 1 : 0); }
-  /** STEP_INSN / STEP_LINE / STEP_FRAME / STEP_BUDGET; returns PAUSED, FINISHED or an error. */
+  /** STEP_INSTRUCTION / STEP_OVER / STEP_INTO / STEP_OUT / STEP_CONTINUE; returns PAUSED,
+   *  FINISHED or an error. */
   stepUntil(mode, budget = 1_000_000) { return this.x.sabi_step_until(mode, budget); }
   /** The VM as it stands: contexts, frames, registers, environments, heap. */
   state(regsFrames = 8) { return JSON.parse(decoder.decode(this.take((lp) => this.x.sabi_state(regsFrames, lp)))); }

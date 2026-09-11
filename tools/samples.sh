@@ -17,8 +17,8 @@ const list = (d, ext) => fs.readdirSync("web/samples/" + d).filter(f => f.endsWi
 const fixtures = list("fixtures").map(n => ({ name: n, path: "samples/fixtures/" + n + ".rb", expected: "samples/fixtures/" + n + ".out" }));
 // What to watch in the debugger; shown as a toast when debugging starts (docs/playground.md).
 const notes = {
-  vm_closure: "環境タブ: mk が返るときに Env がヒープへ移る（detached）",
-  cg_upvar:   "バイトコード欄の GETUPVAR と、環境タブの上位環境のたどり方",
+  vm_closure: "スコープタブ: mk が返るときに Env がヒープへ移る（detached）",
+  cg_upvar:   "バイトコード欄の GETUPVAR と、スコープタブの上位環境のたどり方",
   cg_rescue:  "例外タブ: raise から catch 表を引いて rescue に着くまで",
   vm_fiber:   "Fiber タブ: resume と yield で実行中の context が入れ替わる",
   vm_fiber2:  "Fiber タブ: 二つの Fiber と root の間の切り替え",

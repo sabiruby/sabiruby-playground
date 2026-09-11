@@ -33,12 +33,13 @@
     <button id="share" type="button">共有リンク</button>
   </div>
   <div class="controls debug-controls" id="debug-controls" hidden>
-    <button id="step-line" class="primary" type="button" title="F10">1 行</button>
-    <button id="step-insn" type="button" title="F11">1 命令</button>
-    <button id="step-frame" type="button">呼び出し／戻り</button>
-    <button id="step-go" type="button" title="F5">続行</button>
-    <button id="debug-restart" type="button">最初から</button>
-    <button id="debug-quit" type="button">デバッグ終了</button>
+    <button id="step-over" class="primary" type="button" title="F10 — 次の行へ。メソッド呼び出しは中に入らず実行します">ステップオーバー</button>
+    <button id="step-into" type="button" title="F11 — 次の行へ。呼び出しがあれば中に入ります">ステップイン</button>
+    <button id="step-out" type="button" title="Shift+F11 — いまのフレームを抜けて呼び出し元へ戻ります">ステップアウト</button>
+    <button id="step-insn" type="button" title="Ctrl+F11 — 1 命令だけ進めます">命令ステップ</button>
+    <button id="continue" type="button" title="F5 — 最後まで（または例外まで）実行します">続行</button>
+    <button id="debug-restart" type="button" title="Ctrl+Shift+F5 — 同じコードを最初から">再起動</button>
+    <button id="debug-quit" type="button" title="Shift+F5 — デバッグを終えて通常の表示に戻ります">停止</button>
   </div>
 </header>
 
@@ -80,16 +81,16 @@
   </section>
   <section class="pane vm-pane" id="vm-pane" aria-label="VM の状態" hidden>
     <div class="pane-head">
-      <h2><span class="step">5</span>VM の状態</h2>
+      <h2><span class="step">5</span>VM インスペクタ</h2>
       <span class="pane-note" id="vm-note"></span>
     </div>
     <div class="tabs" id="vm-tabs" role="tablist">
-      <button type="button" role="tab" data-tab="frames" aria-selected="true">フレーム</button>
-      <button type="button" role="tab" data-tab="envs" aria-selected="false">環境</button>
+      <button type="button" role="tab" data-tab="frames" aria-selected="true">コールスタック</button>
+      <button type="button" role="tab" data-tab="envs" aria-selected="false">スコープ（環境）</button>
       <button type="button" role="tab" data-tab="exc" aria-selected="false">例外</button>
       <button type="button" role="tab" data-tab="fibers" aria-selected="false">Fiber</button>
       <button type="button" role="tab" data-tab="gc" aria-selected="false">GC</button>
-      <button type="button" role="tab" data-tab="ops" aria-selected="false">命令</button>
+      <button type="button" role="tab" data-tab="ops" aria-selected="false">命令プロファイル</button>
     </div>
     <div class="vm-body" id="vm-body"></div>
   </section>

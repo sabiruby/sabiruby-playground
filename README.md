@@ -20,8 +20,8 @@ the page is static (GitHub Pages) and everything runs in a Web Worker.
 * The samples are SabiRuby's reference fixtures, each with the reference mruby's stdout:
   **Compare with mruby** checks the playground's output against it, byte for byte. The book's
   example scripts (*Deep dive into mruby*, via the mruby porting kit) are there too.
-* **デバッグ** steps the VM one instruction, one line or one call at a time and shows what is
-  normally invisible: the call stack with named registers, the environments a closure leaves
+* **デバッグ** steps the VM with the usual debugger buttons — step over, step into, step out and
+  one instruction (F10 / F11 / Shift+F11 / Ctrl+F11) — and shows what is normally invisible: the call stack with named registers, the environments a closure leaves
   behind, the catch tables a `raise` walks, the fibers, the heap and the GC, and a histogram of
   the executed opcodes. Hovering an opcode shows its definition and summary. This is what the
   reference mruby on wasm cannot do without patching `vm.c`; see `docs/ideas.md`.
@@ -31,7 +31,7 @@ the page is static (GitHub Pages) and everything runs in a Web Worker.
 
 | | |
 |---|---|
-| `sabiruby.wasm` as deployed | 1,304,581 bytes, 438,274 over gzip (GitHub Pages compresses it); 1,233,982 / 421,485 before the debugger, 1,169,017 / 421,881 before the AST pane |
+| `sabiruby.wasm` as deployed | 1,303,787 bytes, 438,027 over gzip (GitHub Pages compresses it); 1,233,982 / 421,485 before the debugger, 1,169,017 / 421,881 before the AST pane |
 | page ready on the deployed site, fresh browser (navigation start to the Run button enabled: fonts, CodeMirror, the module, the worker, the VM) | 0.43–1.45 s (headless Chromium, two runs, 2026-09-12) |
 | the same from a local server | about 0.37 s |
 | instantiate the module and create the VM with mrblib | 15 ms (Node) |

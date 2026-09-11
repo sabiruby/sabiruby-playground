@@ -3,7 +3,7 @@
 
 import { EditorView, basicSetup, EditorState, keymap, indentWithTab, StreamLanguage, HighlightStyle, syntaxHighlighting, ruby, tags, Compartment, StateField, StateEffect, Decoration } from "./vendor/codemirror/codemirror.js";
 import { renderDump, highlightDump, renderVm, initOpcodeTips } from "./debug.js";
-import { STEP_INSN, STEP_LINE, STEP_FRAME, STEP_BUDGET } from "./sabi.js";
+import { STEP_INSTRUCTION, STEP_OVER, STEP_INTO, STEP_OUT, STEP_CONTINUE } from "./sabi.js";
 
 const DEFAULT = `# SabiRuby Playground
 # mruby 4.1 のコンパイラ（C を wasm に）で翻訳し、Rust 製 VM の SabiRuby（wasm）で実行します。
@@ -33,8 +33,8 @@ const ui = {
   run: $("run"), stop: $("stop"), toggleDump: $("toggle-dump"), toggleAst: $("toggle-ast"), share: $("share"), sample: $("sample"),
   output: $("output"), status: $("status"), dump: $("dump"), dumpPane: $("dump-pane"), ast: $("ast"), astPane: $("ast-pane"), panes: $("panes"),
   compare: $("compare"), compareResult: $("compare-result"), sampleNote: $("sample-note"), version: $("version"), toast: $("toast"),
-  debug: $("debug"), debugControls: $("debug-controls"), stepInsn: $("step-insn"), stepLine: $("step-line"), stepFrame: $("step-frame"),
-  stepGo: $("step-go"), debugRestart: $("debug-restart"), debugQuit: $("debug-quit"),
+  debug: $("debug"), debugControls: $("debug-controls"), stepOver: $("step-over"), stepInto: $("step-into"),
+  stepOut: $("step-out"), stepInsn: $("step-insn"), cont: $("continue"), debugRestart: $("debug-restart"), debugQuit: $("debug-quit"),
   vmPane: $("vm-pane"), vmBody: $("vm-body"), vmTabs: $("vm-tabs"), vmNote: $("vm-note"), dumpNote: $("dump-note"), opcodeTip: $("opcode-tip"),
 };
 
@@ -233,7 +233,7 @@ function sendDebug(message) {
 }
 
 function setStepButtons(on) {
-  for (const b of [ui.stepInsn, ui.stepLine, ui.stepFrame, ui.stepGo]) b.disabled = !on;
+  for (const b of [ui.stepOver, ui.stepInto, ui.stepOut, ui.stepInsn, ui.cont]) b.disabled = !on;
 }
 
 function startDebug() {
@@ -307,7 +307,7 @@ function onDebug(m) {
   const done = m.phase === "finished" || m.phase === "error";
   setStepButtons(!done);
   if (m.phase === "started") {
-    setStatus("最初の命令の手前で止まっています。「1 行」「1 命令」で進みます。");
+    setStatus("最初の命令の手前で止まっています。ステップオーバー（F10）やステップイン（F11）で進みます。");
   } else if (m.phase === "paused") {
     setStatus(`停止中 · ${fmtStats(m.stats)}`);
   } else if (m.phase === "finished") {
@@ -339,10 +339,11 @@ function drawVm() {
 ui.debug.addEventListener("click", () => (debugging ? stopDebug() : startDebug()));
 ui.debugQuit.addEventListener("click", stopDebug);
 ui.debugRestart.addEventListener("click", () => { if (debugging) { leaveDebug(); startDebug(); } });
-ui.stepInsn.addEventListener("click", () => sendDebug({ type: "debug-step", mode: STEP_INSN }));
-ui.stepLine.addEventListener("click", () => sendDebug({ type: "debug-step", mode: STEP_LINE }));
-ui.stepFrame.addEventListener("click", () => sendDebug({ type: "debug-step", mode: STEP_FRAME }));
-ui.stepGo.addEventListener("click", () => { setStatus("実行中…", true); sendDebug({ type: "debug-step", mode: STEP_BUDGET }); });
+ui.stepOver.addEventListener("click", () => sendDebug({ type: "debug-step", mode: STEP_OVER }));
+ui.stepInto.addEventListener("click", () => sendDebug({ type: "debug-step", mode: STEP_INTO }));
+ui.stepOut.addEventListener("click", () => sendDebug({ type: "debug-step", mode: STEP_OUT }));
+ui.stepInsn.addEventListener("click", () => sendDebug({ type: "debug-step", mode: STEP_INSTRUCTION }));
+ui.cont.addEventListener("click", () => { setStatus("実行中…", true); sendDebug({ type: "debug-step", mode: STEP_CONTINUE }); });
 
 ui.vmTabs.addEventListener("click", (e) => {
   const button = e.target.closest("button[data-tab]");
@@ -352,12 +353,17 @@ ui.vmTabs.addEventListener("click", (e) => {
   renderVm(ui.vmBody, vmTab, vm);
 });
 
+// The keys of Visual Studio and VS Code: F10 over, F11 into, Shift+F11 out, F5 continue.
 document.addEventListener("keydown", (e) => {
-  if (!debugging || e.ctrlKey || e.metaKey || e.altKey) return;
-  const key = { F10: ui.stepLine, F11: ui.stepInsn, F5: ui.stepGo }[e.key];
-  if (!key || key.disabled) return;
-  e.preventDefault();
-  key.click();
+  if (!debugging || e.altKey) return;
+  const ctrl = e.ctrlKey || e.metaKey;
+  let button = null;
+  if (e.key === "F10" && !ctrl && !e.shiftKey) button = ui.stepOver;
+  else if (e.key === "F11") button = ctrl ? ui.stepInsn : e.shiftKey ? ui.stepOut : ui.stepInto;
+  else if (e.key === "F5") button = ctrl && e.shiftKey ? ui.debugRestart : e.shiftKey ? ui.debugQuit : ui.cont;
+  if (!button || button.disabled) return;
+  e.preventDefault(); // F5 and Shift+F5 would reload the page
+  button.click();
 });
 
 initOpcodeTips(ui.opcodeTip, ui.dump, ui.vmBody);

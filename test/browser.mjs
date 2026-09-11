@@ -154,14 +154,14 @@ await check("a share link restores the code", async () => {
 
 // ---- the debugger (docs/playground.md, the VM's src/inspect.rs)
 
-await check("stepping by line moves the current instruction", async () => {
+await check("step over moves the current instruction", async () => {
   await setCode("a = 1\nb = a + 1\nc = b * 2\nd = c - 1\ne = d + a\np e\n"); // more lines than the steps below
   await page.click("#debug");
   await page.waitForSelector("#dump .insn.current", { timeout: 20000 });
   const at = () => page.$eval("#dump .insn.current", (e) => `${e.dataset.irep}:${e.dataset.pc}`);
   const seen = [await at()];
   for (let i = 0; i < 3; i++) {
-    await page.click("#step-line");
+    await page.click("#step-over");
     await page.waitForFunction(
       (prev) => { const c = document.querySelector("#dump .insn.current"); return c && `${c.dataset.irep}:${c.dataset.pc}` !== prev; },
       seen[seen.length - 1], { timeout: 20000 });
@@ -191,7 +191,7 @@ await check("running a closure to the end detaches its environment", async () =>
   await page.waitForFunction(() => document.getElementById("sample-note").textContent.startsWith("vm_closure.rb"));
   await page.click("#debug");
   await page.waitForSelector("#dump .insn.current", { timeout: 20000 });
-  await page.click("#step-go");
+  await page.click("#continue");
   await page.waitForFunction(() => /^(完了|例外で終了)/.test(document.getElementById("status").textContent), null, { timeout: 30000 });
   await page.click('#vm-tabs button[data-tab="envs"]');
   const text = await page.textContent("#vm-body");
