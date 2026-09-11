@@ -16,7 +16,7 @@
 <header class="bar">
   <div class="brand">
     <h1>SabiRuby <span>Playground</span></h1>
-    <p class="tagline">mruby 4.1 のコンパイラと Rust 製 VM を、WebAssembly でブラウザの中に</p>
+    <p class="tagline">Rustで書かれたmruby VMの実験環境、mruby 4.1rc 互換</p>
   </div>
   <div class="controls">
     <label class="sample">
@@ -56,7 +56,7 @@
   <section class="pane dump-pane" id="dump-pane" aria-label="バイトコード" hidden>
     <div class="pane-head">
       <h2>バイトコード</h2>
-      <span class="pane-note">sabiruby dump の形式（mrbc --verbose に倣った命令一覧）</span>
+      <span class="pane-note">sabiruby dump の形式</span>
     </div>
     <pre id="dump" class="output dump"></pre>
   </section>
@@ -64,7 +64,7 @@
 
 <footer class="foot">
   <span id="version">…</span>
-  <span>コンパイラは本家 mruby 4.1.0-rc（Prism）そのもの。出力は mrbc とバイト単位で同じ。</span>
+  <span>パーサーは Prism </span>
   <a href="https://github.com/kishima/sabiruby">SabiRuby</a>
   <a href="https://github.com/kishima/sabiruby-playground">ソース</a>
 </footer>
