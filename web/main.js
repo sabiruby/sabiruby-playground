@@ -67,11 +67,10 @@ function setSource(text) {
 // ---------------------------------------------------------------- worker
 
 const modulePromise = (async () => {
-  const t0 = performance.now();
   const response = await fetch("sabiruby.wasm");
   if (!response.ok) throw new Error(`sabiruby.wasm: HTTP ${response.status}`);
   const module = await WebAssembly.compileStreaming(response);
-  return { module, ms: performance.now() - t0 };
+  return { module };
 })();
 
 let worker = null, running = false, ready = false;
@@ -93,7 +92,8 @@ function onMessage(m) {
       ui.version.textContent = m.version;
       ui.run.disabled = false;
       if (loadMs === null) {
-        modulePromise.then(({ ms }) => { loadMs = ms + m.ms; setStatus(`準備完了（wasm の読み込みと VM の初期化: ${fmt(loadMs)} ms）`); });
+        loadMs = performance.now(); // since navigation start: everything the first visit waits for
+        setStatus(`準備完了（ページを開いてから ${fmt(loadMs)} ms）`);
       } else {
         setStatus("準備完了");
       }

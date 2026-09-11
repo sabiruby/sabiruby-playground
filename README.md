@@ -24,12 +24,13 @@ the page is static (GitHub Pages) and everything runs in a Web Worker.
 
 | | |
 |---|---|
-| `sabiruby.wasm` | 1,165,312 bytes (413,230 gzipped), after `wasm-opt -Oz` |
-| fetch + compile the module + create the VM with mrblib | 33 ms (headless Chromium, served locally) |
-| page ready (fonts, CodeMirror, worker, VM) | about 370 ms (same) |
+| `sabiruby.wasm` as deployed | 1,169,017 bytes, 421,881 over gzip (GitHub Pages compresses it) |
+| page ready on the deployed site, fresh browser (navigation start to the Run button enabled: fonts, CodeMirror, the module, the worker, the VM) | 0.43–1.45 s (headless Chromium, two runs, 2026-09-12) |
+| the same from a local server | about 0.37 s |
+| instantiate the module and create the VM with mrblib | 15 ms (Node) |
 | a fixture run | 1–70 ms (Node; `test/fixtures.mjs` prints each) |
 
-Numbers from a local server; over the network the 413 KB download comes first.
+The status line shows the time from opening the page to ready on each first visit.
 
 ## Browsers
 

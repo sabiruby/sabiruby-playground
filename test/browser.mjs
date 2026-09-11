@@ -1,6 +1,7 @@
 // End-to-end test of the page in headless Chromium (Playwright): the real buttons, the Worker,
 // the wasm module with Wasm exception handling, all fixtures through the page's compare button.
 //   npm install && node test/browser.mjs            (CHROMIUM=/path/to/chrome to use a given binary)
+//   URL=https://kishima.github.io/sabiruby-playground/ node test/browser.mjs   (a deployed site)
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
@@ -17,7 +18,7 @@ const server = createServer(async (req, res) => {
     res.writeHead(200, { "content-type": types[extname(file)] || "application/octet-stream" }).end(body);
   } catch { res.writeHead(404).end(); }
 }).listen(0);
-const url = `http://127.0.0.1:${server.address().port}/`;
+const url = process.env.URL || `http://127.0.0.1:${server.address().port}/`;
 
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM || undefined });
 const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
@@ -56,7 +57,7 @@ await check("the default program runs", async () => {
   if (!(await status()).startsWith("完了")) throw new Error(await status());
 });
 
-const fixtures = JSON.parse(await readFile(join(web, "samples/index.json"), "utf8")).fixtures;
+const fixtures = (await (await fetch(new URL("samples/index.json", url))).json()).fixtures;
 await check(`all ${fixtures.length} fixtures match the reference through the compare button`, async () => {
   const failed = [];
   for (const f of fixtures) {
