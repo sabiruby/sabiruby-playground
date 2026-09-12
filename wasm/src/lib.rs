@@ -36,6 +36,9 @@ struct State {
     /// Kept across `sabi_reset`, which builds a new VM.
     trace: bool,
     stress: bool,
+    /// Stop only where the listing can show it: mrblib and the gems are stepped through without
+    /// stopping (their ireps were loaded before the program, so they are below `offset`).
+    program_only: bool,
 }
 
 thread_local! {
@@ -218,6 +221,13 @@ pub extern "C" fn sabi_trace(on: u32) {
     with(|st| { st.trace = on != 0; if let Some(vm) = st.vm.as_mut() { vm.set_trace(on != 0); } });
 }
 
+/// Stepping stops only in the program's own ireps when `on`: mrblib and the gems (`Integer#times`
+/// and the like) run to their end instead of stopping inside them, where the listing has no row.
+#[unsafe(no_mangle)]
+pub extern "C" fn sabi_step_program_only(on: u32) {
+    with(|st| st.program_only = on != 0);
+}
+
 /// Runs until something happens, as a debugger's step buttons do: `mode` 0 one instruction,
 /// 1 step over (the next line of this frame; calls run without stopping inside them), 2 step into
 /// (the next line, or the moment a frame is entered or left), 3 step out (this frame returns),
@@ -225,6 +235,7 @@ pub extern "C" fn sabi_trace(on: u32) {
 #[unsafe(no_mangle)]
 pub extern "C" fn sabi_step_until(mode: u32, budget: u32) -> u32 {
     with(|st| {
+        let (offset, program_only) = (st.offset, st.program_only);
         let Some(vm) = st.vm.as_mut() else { st.text = b"no program started".to_vec(); return INTERNAL_ERROR };
         if mode == 4 {
             return match vm.step(budget as u64) {
@@ -249,7 +260,9 @@ pub extern "C" fn sabi_step_until(mode: u32, budget: u32) -> u32 {
                 3 => depth < depth0,                                  // step out: until this frame returns
                 _ => depth != depth0 || line_changed,                 // step into
             };
-            if stop { return 0; }
+            // inside mrblib or a gem there is no row to highlight, so `program_only` runs on
+            let showable = !program_only || vm.ci.last().is_none_or(|c| c.irep >= offset);
+            if stop && showable { return 0; }
         }
         0
     })

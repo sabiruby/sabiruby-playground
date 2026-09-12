@@ -136,6 +136,26 @@ const checks = {
     assert.equal(sabi.stepUntil(STEP_OUT), PAUSED);
     assert.equal(depth(), 1, "step out did not return to the caller");
   },
+  "stepProgramOnly runs mrblib without stopping inside it": () => {
+    // 3.times is Ruby in mrblib: most of the instructions of this program are in an irep the
+    // listing does not carry (its index is below dumpJson().offset)
+    const outsideStops = (programOnly) => {
+      debugStart("3.times { |i| i }\n");
+      const offset = sabi.dumpJson().offset;
+      sabi.stepProgramOnly(programOnly);
+      let outside = 0;
+      for (let k = 0; k < 300; k++) {
+        if (sabi.stepUntil(STEP_INSTRUCTION) !== PAUSED) break;
+        const fr = sabi.state(1).contexts[0].frames;
+        const top = fr[fr.length - 1];
+        if (top && top.irep < offset) outside++;
+      }
+      sabi.stepProgramOnly(false);
+      return outside;
+    };
+    assert.ok(outsideStops(false) > 0, "this program should step through mrblib by default");
+    assert.equal(outsideStops(true), 0, "stopped inside mrblib with stepProgramOnly(true)");
+  },
   "a closure's trace has EnvCreate and EnvDetach": () => {
     debugStart("def mk\n  n = 0\n  -> { n += 1 }\nend\nc = mk\np c.call\n");
     let r;

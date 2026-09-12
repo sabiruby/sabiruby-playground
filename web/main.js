@@ -35,7 +35,8 @@ const ui = {
   compare: $("compare"), compareResult: $("compare-result"), sampleNote: $("sample-note"), version: $("version"), toast: $("toast"),
   debug: $("debug"), debugControls: $("debug-controls"), stepOver: $("step-over"), stepInto: $("step-into"),
   stepOut: $("step-out"), stepInsn: $("step-insn"), cont: $("continue"), debugRestart: $("debug-restart"), debugQuit: $("debug-quit"),
-  vmPane: $("vm-pane"), vmBody: $("vm-body"), vmTabs: $("vm-tabs"), vmNote: $("vm-note"), dumpNote: $("dump-note"), opcodeTip: $("opcode-tip"),
+  stepScope: $("step-scope"), vmPane: $("vm-pane"), vmBody: $("vm-body"), vmTabs: $("vm-tabs"), vmNote: $("vm-note"),
+  dumpNote: $("dump-note"), dumpBanner: $("dump-banner"), opcodeTip: $("opcode-tip"),
 };
 
 // ---------------------------------------------------------------- editor
@@ -255,6 +256,7 @@ function startDebug() {
   setStepButtons(false);
   setStatus("デバッグの準備をしています…", true);
   worker.postMessage({ type: "debug-start", src: lastRunSource });
+  worker.postMessage({ type: "debug-scope", programOnly: !enteringMrblib() }); // a new worker starts with the default
   if (current && current.note && source() === current.text) toast(`見どころ: ${current.note}`);
 }
 
@@ -270,6 +272,7 @@ function leaveDebug() {
   showVmLine(null);
   highlightDump(ui.dump, null, 0);
   ui.dumpNote.textContent = "sabiruby dump の形式";
+  ui.dumpBanner.hidden = true;
 }
 
 function stopDebug() {
@@ -327,8 +330,11 @@ const currentFrames = () => (vm.state && vm.state.contexts && vm.state.contexts.
 
 function drawVm() {
   const offset = vm.dump ? vm.dump.offset : 0;
-  const note = highlightDump(ui.dump, vm.state, offset);
-  ui.dumpNote.textContent = note || "実行中の命令を強調しています";
+  // inside mrblib the listing has no row to highlight; the banner says where the VM is instead
+  const banner = highlightDump(ui.dump, vm.state, offset);
+  ui.dumpBanner.textContent = banner;
+  ui.dumpBanner.hidden = !banner;
+  ui.dumpNote.textContent = "実行中の命令を強調しています";
   const frames = currentFrames();
   const top = frames[frames.length - 1];
   showVmLine(top && top.irep >= offset ? top.line : null);
@@ -344,6 +350,14 @@ ui.stepInto.addEventListener("click", () => sendDebug({ type: "debug-step", mode
 ui.stepOut.addEventListener("click", () => sendDebug({ type: "debug-step", mode: STEP_OUT }));
 ui.stepInsn.addEventListener("click", () => sendDebug({ type: "debug-step", mode: STEP_INSTRUCTION }));
 ui.cont.addEventListener("click", () => { setStatus("実行中…", true); sendDebug({ type: "debug-step", mode: STEP_CONTINUE }); });
+
+const enteringMrblib = () => ui.stepScope.getAttribute("aria-pressed") === "true";
+ui.stepScope.addEventListener("click", () => {
+  const on = !enteringMrblib();
+  ui.stepScope.setAttribute("aria-pressed", String(on));
+  worker.postMessage({ type: "debug-scope", programOnly: !on });
+  toast(on ? "mrblib や gem の中でも止まります" : "mrblib や gem の中では止まりません（プログラムの命令だけ）");
+});
 
 ui.vmTabs.addEventListener("click", (e) => {
   const button = e.target.closest("button[data-tab]");

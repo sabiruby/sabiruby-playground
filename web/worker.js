@@ -98,6 +98,8 @@ self.onmessage = async (e) => {
       debugStart(m.src);
     } else if (m.type === "debug-step") {
       debugStep(m.mode, m.budget);
+    } else if (m.type === "debug-scope") {
+      sabi.stepProgramOnly(m.programOnly);
     } else if (m.type === "debug-gc") {
       if (m.stress !== undefined) sabi.gcStress(m.stress);
       if (m.collect) sabi.gcCollect();

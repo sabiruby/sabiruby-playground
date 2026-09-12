@@ -46,25 +46,32 @@ export function renderDump(root, dump) {
 }
 
 /** Marks where the VM stands: `.current` on the running instruction, `.caller` on the frames
- *  below it. Returns a note when the running irep is not in the listing (mrblib or a gem). */
+ *  below it. When the VM is inside an irep this pane does not list -- mrblib or a gem, loaded
+ *  before the program and therefore below `offset` -- the call it is running is marked `.calling`
+ *  instead, so the pane does not look frozen, and the text for the banner is returned. */
 export function highlightDump(root, state, offset) {
-  for (const e of root.querySelectorAll(".current, .caller")) e.classList.remove("current", "caller");
+  for (const e of root.querySelectorAll(".current, .caller, .calling")) e.classList.remove("current", "caller", "calling");
   if (!state || !state.contexts || !state.contexts.length) return "";
   const frames = state.contexts[state.cur].frames;
   if (!frames.length) return "";
-  let note = "";
-  frames.forEach((f, i) => {
-    const innermost = i === frames.length - 1;
-    const row = root.querySelector(`.insn[data-irep="${f.irep - offset}"][data-pc="${f.pc}"]`);
-    if (!row) {
-      // mrblib and the gems are loaded before the program, so their ireps come before `offset`
-      if (innermost && f.irep < offset) note = `${f.target_class}${f.mid ? "#" + f.mid : ""} を実行中（mrblib／gem の irep ${f.irep}。この欄はプログラムの分だけです）`;
-      return;
-    }
-    row.classList.add(innermost ? "current" : "caller");
-    if (innermost) scrollIntoPane(root, row);
-  });
-  return note;
+  const rows = frames.map((f) => root.querySelector(`.insn[data-irep="${f.irep - offset}"][data-pc="${f.pc}"]`));
+  const last = frames.length - 1;
+  rows.forEach((row, i) => { if (row) row.classList.add(i === last ? "current" : "caller"); });
+  if (rows[last]) {
+    scrollIntoPane(root, rows[last]);
+    return "";
+  }
+  // the innermost frame has no row: mark the deepest call that does have one
+  for (let i = last; i >= 0; i--) {
+    if (!rows[i]) continue;
+    rows[i].classList.replace("caller", "calling");
+    scrollIntoPane(root, rows[i]);
+    break;
+  }
+  const f = frames[last];
+  const where = f.mid ? `${f.target_class}#${f.mid}` : f.target_class;
+  const origin = f.irep < offset ? "mrblib／gem" : "この欄に無い irep";
+  return `${origin} の ${where} を実行中 · irep ${f.irep} · pc ${pad3(f.pc)}${f.line === null ? "" : ` · ${f.line} 行目`}`;
 }
 
 function scrollIntoPane(pane, row) {

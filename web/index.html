@@ -38,6 +38,7 @@
     <button id="step-out" type="button" title="Shift+F11 — いまのフレームを抜けて呼び出し元へ戻ります">ステップアウト</button>
     <button id="step-insn" type="button" title="Ctrl+F11 — 1 命令だけ進めます">命令ステップ</button>
     <button id="continue" type="button" title="F5 — 最後まで（または例外まで）実行します">続行</button>
+    <button id="step-scope" type="button" aria-pressed="true" title="オフにすると、mrblib や gem の中では止まらず、プログラム自身の命令だけを追います">mrblib に入る</button>
     <button id="debug-restart" type="button" title="Ctrl+Shift+F5 — 同じコードを最初から">再起動</button>
     <button id="debug-quit" type="button" title="Shift+F5 — デバッグを終えて通常の表示に戻ります">停止</button>
   </div>
@@ -65,6 +66,7 @@
       <h2><span class="step">3</span>バイトコード</h2>
       <span class="pane-note" id="dump-note">sabiruby dump の形式</span>
     </div>
+    <div id="dump-banner" class="banner" hidden></div>
     <pre id="dump" class="output tree"></pre>
   </section>
 

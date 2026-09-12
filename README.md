@@ -31,7 +31,7 @@ the page is static (GitHub Pages) and everything runs in a Web Worker.
 
 | | |
 |---|---|
-| `sabiruby.wasm` as deployed | 1,303,787 bytes, 438,027 over gzip (GitHub Pages compresses it); 1,233,982 / 421,485 before the debugger, 1,169,017 / 421,881 before the AST pane |
+| `sabiruby.wasm` as deployed | 1,303,895 bytes, 438,065 over gzip (GitHub Pages compresses it); 1,233,982 / 421,485 before the debugger, 1,169,017 / 421,881 before the AST pane |
 | page ready on the deployed site, fresh browser (navigation start to the Run button enabled: fonts, CodeMirror, the module, the worker, the VM) | 0.43–1.45 s (headless Chromium, two runs, 2026-09-12) |
 | the same from a local server | about 0.37 s |
 | instantiate the module and create the VM with mrblib | 15 ms (Node) |

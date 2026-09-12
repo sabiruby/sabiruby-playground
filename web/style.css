@@ -232,6 +232,18 @@ select { max-width: 16rem; padding-right: 8px; }
 #dump .irep-note { display: block; color: var(--muted); }
 #dump .insn.current { background: var(--rust-soft); outline: 1px solid var(--rust); border-radius: 3px; }
 #dump .insn.caller { background: color-mix(in srgb, var(--rust-soft) 40%, transparent); }
+/* the call the VM is inside: its own instructions are in mrblib, which this pane does not list */
+#dump .insn.calling { background: var(--rust-soft); outline: 1px dashed var(--rust); border-radius: 3px; }
+.banner {
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--rule);
+  background: var(--rust-soft);
+  color: var(--ink);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+.banner[hidden] { display: none; }
 .cm-currentVmLine { background: var(--rust-soft); }
 
 /* the VM pane */

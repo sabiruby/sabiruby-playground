@@ -86,6 +86,8 @@ export class Sabi {
   state(regsFrames = 8) { return JSON.parse(decoder.decode(this.take((lp) => this.x.sabi_state(regsFrames, lp)))); }
   /** The events recorded since the last call. */
   takeTrace() { return JSON.parse(decoder.decode(this.take(this.x.sabi_take_trace))); }
+  /** Stop only in the program's own ireps: mrblib and the gems run without stopping inside. */
+  stepProgramOnly(on) { this.x.sabi_step_program_only(on ? 1 : 0); }
   gcCollect() { return this.x.sabi_gc_collect(); }
   gcStress(on) { this.x.sabi_gc_stress(on ? 1 : 0); }
   /** `[{op, count}, ..]` for the instructions executed so far. */

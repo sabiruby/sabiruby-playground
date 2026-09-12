@@ -170,6 +170,25 @@ await check("step over moves the current instruction", async () => {
   if (new Set(seen).size !== seen.length) throw new Error(`did not move: ${seen.join(" -> ")}`);
 });
 
+await check("stepping into mrblib says so, and the toggle keeps stepping in the program", async () => {
+  await page.click("#debug"); // leave the session above
+  await setCode("3.times { |i| i }\n");
+  await page.click("#debug");
+  await page.waitForSelector("#dump .insn.current", { timeout: 20000 });
+  for (let i = 0; i < 8 && (await page.isHidden("#dump-banner")); i++) await page.click("#step-insn");
+  if (await page.isHidden("#dump-banner")) throw new Error("no banner after stepping into 3.times");
+  const text = await page.textContent("#dump-banner");
+  if (!text.includes("Integer#times")) throw new Error(text);
+  if (!(await page.$("#dump .insn.calling"))) throw new Error("the call being run is not marked");
+
+  // the toggle: from the next step on, mrblib runs without stopping
+  await page.click("#step-scope");
+  await page.click("#step-insn");
+  await page.waitForFunction(() => document.getElementById("dump-banner").hidden, null, { timeout: 20000 });
+  if (!(await page.$("#dump .insn.current"))) throw new Error("no current instruction after leaving mrblib");
+  await page.click("#step-scope"); // back to the default for the checks below
+});
+
 await check("the frame table shows main and its registers", async () => {
   const text = await page.textContent("#vm-body");
   if (!text.includes("(main)")) throw new Error(text.slice(0, 160));
