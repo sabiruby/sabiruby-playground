@@ -23,6 +23,8 @@ const notes = {
   vm_fiber:   "Fiber タブ: resume と yield で実行中の context が入れ替わる",
   vm_fiber2:  "Fiber タブ: 二つの Fiber と root の間の切り替え",
   gc_churn:   "GC タブ: live と allocated_since_gc、回収の履歴",
+  vm_task:    "Fiber タブ: タスクも context を 1 つずつ持ち、優先度順に入れ替わる",
+  vm_task_sleep: "Fiber タブ: 眠ったタスクの context は残ったまま、別の context が走る",
 };
 const book = list("book").map(n => ({ name: n, path: "samples/book/" + n + ".rb", ...(notes[n] ? { note: notes[n] } : {}) }));
 fs.writeFileSync("web/samples/index.json", JSON.stringify({ fixtures, book }, null, 1) + "\n");

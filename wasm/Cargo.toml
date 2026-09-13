@@ -12,7 +12,7 @@ crate-type = ["cdylib"]
 [dependencies]
 # Local checkout next to this repository (see README: Building). CI checks out kishima/sabiruby there.
 sabiruby = { path = "../../sabiruby" }
-sabiruby-compiler = { path = "../../sabiruby/compiler", features = ["ast"] }
+sabiruby-compiler = { path = "../../sabiruby/compiler", features = ["ast", "host"] }
 
 [profile.release]
 lto = true

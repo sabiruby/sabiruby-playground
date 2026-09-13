@@ -68,6 +68,7 @@ name = "sabiruby-compiler"
 version = "0.1.1"
 dependencies = [
  "cc",
+ "sabiruby",
 ]
 
 [[package]]

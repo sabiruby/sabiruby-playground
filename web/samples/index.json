@@ -84,6 +84,11 @@
    "name": "strings",
    "path": "samples/fixtures/strings.rb",
    "expected": "samples/fixtures/strings.out"
+  },
+  {
+   "name": "utf8",
+   "path": "samples/fixtures/utf8.rb",
+   "expected": "samples/fixtures/utf8.out"
   }
  ],
  "book": [
@@ -118,6 +123,14 @@
   {
    "name": "cg_def",
    "path": "samples/book/cg_def.rb"
+  },
+  {
+   "name": "cg_eval",
+   "path": "samples/book/cg_eval.rb"
+  },
+  {
+   "name": "cg_eval_leak",
+   "path": "samples/book/cg_eval_leak.rb"
   },
   {
    "name": "cg_fold",
@@ -198,6 +211,14 @@
    "path": "samples/book/corelib_raise_forms.rb"
   },
   {
+   "name": "corelib_regexp",
+   "path": "samples/book/corelib_regexp.rb"
+  },
+  {
+   "name": "corelib_strftime",
+   "path": "samples/book/corelib_strftime.rb"
+  },
+  {
    "name": "corelib_strings",
    "path": "samples/book/corelib_strings.rb"
   },
@@ -244,6 +265,10 @@
    "path": "samples/book/vm_const.rb"
   },
   {
+   "name": "vm_enum_fiber",
+   "path": "samples/book/vm_enum_fiber.rb"
+  },
+  {
    "name": "vm_fiber",
    "path": "samples/book/vm_fiber.rb",
    "note": "Fiber タブ: resume と yield で実行中の context が入れ替わる"
@@ -272,6 +297,16 @@
   {
    "name": "vm_stack",
    "path": "samples/book/vm_stack.rb"
+  },
+  {
+   "name": "vm_task",
+   "path": "samples/book/vm_task.rb",
+   "note": "Fiber タブ: タスクも context を 1 つずつ持ち、優先度順に入れ替わる"
+  },
+  {
+   "name": "vm_task_sleep",
+   "path": "samples/book/vm_task_sleep.rb",
+   "note": "Fiber タブ: 眠ったタスクの context は残ったまま、別の context が走る"
   },
   {
    "name": "vm_visibility",

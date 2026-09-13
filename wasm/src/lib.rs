@@ -63,7 +63,16 @@ fn give(st: &mut State, bytes: Vec<u8>, len_out: *mut u32) -> *const u8 {
 fn new_vm(st: &mut State) -> u32 {
     let (trace, stress) = (st.trace, st.stress);
     match Vm::with_mrblib() {
-        Ok(mut vm) => { vm.set_trace(trace); vm.set_gc_stress(stress); st.vm = Some(vm); OK }
+        Ok(mut vm) => {
+            vm.set_trace(trace);
+            vm.set_gc_stress(stress);
+            // the same compiler the page compiles the program with, as the VM's host: this is
+            // what `eval`, `instance_eval` and `Binding#eval` ask for a compile (there are no
+            // files behind `require` in a browser, so that one still raises LoadError)
+            vm.set_host(Box::new(sabiruby_compiler::Compiler::new()));
+            st.vm = Some(vm);
+            OK
+        }
         Err(e) => { st.text = format!("could not initialise the VM: {e}").into_bytes(); INTERNAL_ERROR }
     }
 }
