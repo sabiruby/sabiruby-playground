@@ -83,6 +83,18 @@ const checks = {
     assert.equal(sabi.compile("puts 'hello'"), OK);
     assert.match(sabi.dump(), /^irep 0 nregs=\d+ nlocals=1 [\s\S]*SSEND\t\d+\t\d+\t1\t; :puts/);
   },
+  "binary() hands out the compiled RITE bytes, and they load back": () => {
+    assert.equal(sabi.compile("puts 6 * 7"), OK);
+    const bin = sabi.binary();
+    assert.equal(decoder.decode(bin.subarray(0, 4)), "RITE");
+    assert.equal(sabi.reset(), OK);
+    assert.equal(sabi.load(bin), OK);
+    assert.equal(sabi.start(), OK);
+    let r;
+    while ((r = sabi.step(1_000_000)) === PAUSED);
+    assert.equal(r, FINISHED);
+    assert.equal(decoder.decode(sabi.output()), "42\n");
+  },
   "a file that is not RITE is rejected by sabi_load": () => {
     assert.equal(sabi.load(new Uint8Array([1, 2, 3])), COMPILE_ERROR);
     assert.match(sabi.text(), /not a RITE binary/);

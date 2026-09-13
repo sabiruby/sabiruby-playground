@@ -213,6 +213,17 @@ pub extern "C" fn sabi_take_text(len_out: *mut u32) -> *const u8 {
     })
 }
 
+/// The compiled binary itself (a `.mrb` file's bytes), for a host that runs it in a VM of its
+/// own — a game in the browser that has the VM but not the C compiler. Empty before a compile
+/// has succeeded. The binary stays: `sabi_start` and `sabi_dump` still see it.
+#[unsafe(no_mangle)]
+pub extern "C" fn sabi_take_binary(len_out: *mut u32) -> *const u8 {
+    with(|st| {
+        let bin = st.bin.clone().unwrap_or_default();
+        give(st, bin, len_out)
+    })
+}
+
 /// The instruction listing of the compiled binary (`sabiruby dump`, in the style of
 /// `mrbc --verbose`).
 #[unsafe(no_mangle)]
