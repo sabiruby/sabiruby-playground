@@ -34,6 +34,73 @@ function run(src) {
   post({ type: "done", kind, text: r === FINISHED ? "" : sabi.text(), stats: sabi.stats(), ms: performance.now() - t0 });
 }
 
+/** Milliseconds of real time, waited on the event loop (there is no thread here to block). */
+const delay = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * The same program, with mruby-task's clock taken from the wall clock instead of from the
+ * instruction count: `sleep 1` waits a second, and the task that is not sleeping runs meanwhile.
+ *
+ * Two things this loop has to get right, both of them lessons from FreeRTOS's own Emscripten
+ * port (`doc/wasm/` of family-mruby), where the same two bugs cost a day each:
+ *
+ *   * the clock is caught up from a fixed origin (`due = elapsed / tick`), never by adding up
+ *     deltas, so rounding does not accumulate and a slow turn is made up for on the next one;
+ *   * the catch-up happens *before* the scheduler runs, above — a turn that woke a task and only
+ *     then moved the clock would leave it waiting one more turn, which shows up as every sleep
+ *     taking one loop period too long.
+ *
+ * The program itself is a task here (`startAsTask`), which is what makes a plain top-level
+ * `sleep` the scheduler's business. `Task.current` answers that task rather than the "main"
+ * wrapper: the one visible difference from a normal run.
+ */
+async function runRealtime(src) {
+  const t0 = performance.now();
+  if (sabi.reset() !== OK) return post({ type: "done", kind: "internal", text: sabi.text(), ms: 0 });
+  if (sabi.compile(src) !== OK) {
+    const text = sabi.text();
+    sabi.takeConsole();
+    return post({ type: "done", kind: "compile", text, ms: performance.now() - t0 });
+  }
+  if (sabi.startAsTask() !== OK) return post({ type: "done", kind: "internal", text: sabi.text(), ms: 0 });
+  sabi.taskExternalClock(true);
+  const unit = sabi.taskTickUnitMs();
+  const origin = performance.now();
+  let supplied = 0, last = t0, yielded = origin;
+  for (;;) {
+    const due = Math.floor((performance.now() - origin) / unit);
+    sabi.taskAdvanceTicks(due - supplied);
+    supplied = Math.max(supplied, due);
+
+    const { status, spent } = sabi.taskRun(BUDGET);
+    flush();
+    if (status !== OK) {
+      return post({ type: "done", kind: "error", text: sabi.text(), stats: sabi.stats(), ms: performance.now() - t0 });
+    }
+    const state = sabi.taskProgramState();
+    if (state !== 0 && !sabi.taskPending()) {
+      const kind = state === 2 ? "error" : "finished";
+      return post({ type: "done", kind, text: kind === "error" ? sabi.text() : "", stats: sabi.stats(), ms: performance.now() - t0 });
+    }
+    const now = performance.now();
+    if (now - last > 200) { post({ type: "progress", stats: sabi.stats(), ms: now - t0, realtime: true }); last = now; }
+
+    if (spent === 0) {
+      // nothing to run: wait out the earliest deadline (capped, so a long sleep still reports
+      // progress and a stop is seen), or end where nothing can wake anything
+      const wait = sabi.taskNextWakeupMs();
+      if (wait < 0) {
+        return post({ type: "done", kind: "finished", text: "", stats: sabi.stats(), ms: performance.now() - t0 });
+      }
+      await delay(Math.min(Math.max(wait, 1), 100));
+      yielded = performance.now();
+    } else if (now - yielded > 16) {
+      await delay(0); // let messages through while a task is busy
+      yielded = performance.now();
+    }
+  }
+}
+
 /** The AST and the bytecode of `src`, for the panes between the code and the result. */
 function inspect(src, id) {
   const ast = sabi.ast(src);
@@ -91,7 +158,7 @@ self.onmessage = async (e) => {
       if (sabi.reset() !== OK) throw new Error(sabi.text());
       post({ type: "ready", version: sabi.version(), ms: performance.now() - t0 });
     } else if (m.type === "run") {
-      run(m.src);
+      if (m.realtime) await runRealtime(m.src); else run(m.src);
     } else if (m.type === "inspect") {
       inspect(m.src, m.id);
     } else if (m.type === "debug-start") {

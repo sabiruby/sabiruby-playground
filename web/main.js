@@ -33,6 +33,7 @@ const ui = {
   run: $("run"), stop: $("stop"), toggleDump: $("toggle-dump"), toggleAst: $("toggle-ast"), share: $("share"), sample: $("sample"),
   output: $("output"), status: $("status"), dump: $("dump"), dumpPane: $("dump-pane"), ast: $("ast"), astPane: $("ast-pane"), panes: $("panes"),
   compare: $("compare"), compareResult: $("compare-result"), sampleNote: $("sample-note"), version: $("version"), toast: $("toast"),
+  realtime: $("realtime"),
   debug: $("debug"), debugControls: $("debug-controls"), stepOver: $("step-over"), stepInto: $("step-into"),
   stepOut: $("step-out"), stepInsn: $("step-insn"), cont: $("continue"), debugRestart: $("debug-restart"), debugQuit: $("debug-quit"),
   stepScope: $("step-scope"), vmPane: $("vm-pane"), vmBody: $("vm-body"), vmTabs: $("vm-tabs"), vmNote: $("vm-note"),
@@ -174,10 +175,20 @@ function run() {
   outLen = 0; truncated = false; lastOutput = "";
   lastRunSource = source();
   hideCompare();
-  setStatus("実行中…", true);
-  worker.postMessage({ type: "run", src: lastRunSource });
+  const realtime = ui.realtime.getAttribute("aria-pressed") === "true";
+  setStatus(realtime ? "実行中…（実時間）" : "実行中…", true);
+  worker.postMessage({ type: "run", src: lastRunSource, realtime });
   requestInspect();
 }
+
+// `sleep` waits for real: the program runs as a task and mruby-task's clock comes from the
+// browser's, so a sleeping task costs time instead of nothing (docs/playground.md). Off by
+// default, and not used while debugging, where the page steps the root context itself.
+ui.realtime.addEventListener("click", () => {
+  const on = ui.realtime.getAttribute("aria-pressed") !== "true";
+  ui.realtime.setAttribute("aria-pressed", String(on));
+  toast(on ? "実時間: sleep はブラウザの時計で待ちます（プログラムはタスクとして走ります）" : "実時間をやめました: tick は命令数で進みます");
+});
 
 function finishRun(m) {
   running = false;
@@ -245,6 +256,7 @@ function startDebug() {
   ui.vmPane.hidden = false;
   ui.run.disabled = true;
   ui.stop.disabled = true;
+  ui.realtime.disabled = true; // the page steps the root context itself here
   setEditable(false);
   ui.output.textContent = "";
   decoder = new TextDecoder("utf-8", { fatal: false });
@@ -268,6 +280,7 @@ function leaveDebug() {
   ui.debugControls.hidden = true;
   ui.vmPane.hidden = true;
   ui.run.disabled = !ready;
+  ui.realtime.disabled = false;
   setEditable(true);
   showVmLine(null);
   highlightDump(ui.dump, null, 0);

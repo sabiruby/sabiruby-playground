@@ -152,6 +152,33 @@ await check("a share link restores the code", async () => {
   if (out !== "shared 2\n") throw new Error(JSON.stringify(out));
 });
 
+// ---- real time (docs/playground.md): sleep waits on the browser's clock
+
+await check("実時間: sleep waits for real, and another task runs meanwhile", async () => {
+  await page.click("#realtime");
+  try {
+    const t0 = Date.now();
+    const out = await runCode('t = Time.now\nTask.new { 4.times { |i| puts "  tick #{i}"; sleep 0.05 } }\n3.times { sleep 0.1 }\nputs "slept #{((Time.now - t) * 1000).round} ms"\n');
+    const ms = Date.now() - t0;
+    // 3 x 100 ms of real waiting: a loop period may be added to each, never a multiple of it
+    if (ms < 280 || ms > 900) throw new Error(`wall clock ${ms} ms`);
+    const said = Number(/slept (\d+) ms/.exec(out)?.[1]);
+    if (!(said >= 290 && said <= 600)) throw new Error(`Ruby's own clock says ${said}: ${JSON.stringify(out)}`);
+    // the sleeping program leaves the CPU to the other task, which wakes twice as often
+    if ((out.match(/tick/g) || []).length < 4) throw new Error(`the other task did not run: ${JSON.stringify(out)}`);
+    if (!(await status()).startsWith("完了")) throw new Error(await status());
+  } finally {
+    await page.click("#realtime"); // back to the instruction-counted clock for the checks below
+  }
+});
+
+await check("the same program without 実時間 does not wait", async () => {
+  const t0 = Date.now();
+  await runCode('3.times { sleep 0.1 }\nputs "done"\n');
+  const ms = Date.now() - t0;
+  if (ms > 250) throw new Error(`took ${ms} ms with the instruction-counted clock`);
+});
+
 // ---- the debugger (docs/playground.md, the VM's src/inspect.rs)
 
 await check("the step buttons are out of the way until the debug button is pressed", async () => {

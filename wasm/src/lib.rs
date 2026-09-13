@@ -39,6 +39,9 @@ struct State {
     /// Stop only where the listing can show it: mrblib and the gems are stepped through without
     /// stopping (their ireps were loaded before the program, so they are below `offset`).
     program_only: bool,
+    /// In real time (`sabi_start_as_task`): the task the program itself runs as, so that the
+    /// scheduler's own clock — driven by the host, from the wall clock — carries its `sleep`.
+    program_task: Option<sabiruby::value::ObjId>,
 }
 
 thread_local! {
@@ -59,6 +62,15 @@ fn give(st: &mut State, bytes: Vec<u8>, len_out: *mut u32) -> *const u8 {
     st.ret.as_ptr()
 }
 
+/// The time of day, for `Time.now` and for what `sleep` answers. WASI's realtime clock is the
+/// browser's `Date.now()` through the shim (`web/vendor/browser_wasi_shim`).
+fn wall_clock() -> (i64, i64) {
+    match std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
+        Ok(d) => (d.as_secs() as i64, d.subsec_nanos() as i64),
+        Err(_) => (0, 0),
+    }
+}
+
 /// A fresh VM with mrblib loaded (the state `sabiruby` starts a program in).
 fn new_vm(st: &mut State) -> u32 {
     let (trace, stress) = (st.trace, st.stress);
@@ -70,6 +82,8 @@ fn new_vm(st: &mut State) -> u32 {
             // what `eval`, `instance_eval` and `Binding#eval` ask for a compile (there are no
             // files behind `require` in a browser, so that one still raises LoadError)
             vm.set_host(Box::new(sabiruby_compiler::Compiler::new()));
+            vm.wall_clock = Some(wall_clock);
+            st.program_task = None;
             st.vm = Some(vm);
             OK
         }
@@ -350,5 +364,116 @@ pub unsafe extern "C" fn sabi_stats(insns_out: *mut u64, live_out: *mut u64, gc_
             if !live_out.is_null() { *live_out = l; }
             if !gc_out.is_null() { *gc_out = g; }
         }
+    })
+}
+
+// ---- real time: the scheduler driven by the host's clock (docs/playground.md, "実時間")
+//
+// Without a host the tick is counted in instructions and the scheduler jumps the clock when
+// every task is asleep, so `sleep 1` costs nothing and answers at once. The page can do better:
+// the VM returns to JS between instructions, so the worker waits on the event loop (no thread to
+// block, no SharedArrayBuffer) and moves the clock from the wall clock it can read.
+
+/// Says the host moves mruby-task's clock itself (`sabi_task_advance_ticks`); the instruction
+/// count then only ends timeslices, and an idle scheduler no longer jumps the clock.
+#[unsafe(no_mangle)]
+pub extern "C" fn sabi_task_external_clock(on: u32) {
+    with(|st| { if let Some(vm) = st.vm.as_mut() { vm.task_external_clock(on != 0); } });
+}
+
+/// Milliseconds one tick stands for (`MRB_TICK_UNIT`), which is what the host divides its
+/// elapsed time by.
+#[unsafe(no_mangle)]
+pub extern "C" fn sabi_task_tick_unit_ms() -> u32 {
+    with(|st| st.vm.as_ref().map(|vm| vm.task_tick_unit_ms()).unwrap_or(4))
+}
+
+/// Moves the clock on by `n` ticks and wakes what was sleeping until then.
+#[unsafe(no_mangle)]
+pub extern "C" fn sabi_task_advance_ticks(n: u32) {
+    with(|st| { if let Some(vm) = st.vm.as_mut() { vm.task_advance_ticks(n); } });
+}
+
+/// One turn of the host loop: ready tasks, one timeslice each, until `budget` instructions are
+/// spent or nothing is ready. Writes what it spent to `spent_out`. 0 ok, 2 the scheduler itself
+/// raised (`sabi_take_text`) — a task's own exception is its result, not an error here.
+#[unsafe(no_mangle)]
+pub extern "C" fn sabi_task_run(budget: u32, spent_out: *mut u32) -> u32 {
+    with(|st| {
+        let Some(vm) = st.vm.as_mut() else { st.text = b"no program started".to_vec(); return INTERNAL_ERROR };
+        match vm.task_run_budget(budget as u64) {
+            Ok(spent) => {
+                // SAFETY: JS passes a pointer into this module's memory, or null.
+                unsafe { if !spent_out.is_null() { *spent_out = spent as u32; } }
+                OK
+            }
+            Err(e) => { st.text = vm.describe_error(&e).into_bytes(); RUNTIME_ERROR }
+        }
+    })
+}
+
+/// Milliseconds until the earliest sleeping task is due, or -1 where nothing is waiting on a
+/// deadline: how long the host may wait before calling the scheduler again.
+#[unsafe(no_mangle)]
+pub extern "C" fn sabi_task_next_wakeup_ms() -> i32 {
+    with(|st| {
+        let Some(vm) = st.vm.as_ref() else { return -1 };
+        match vm.task_next_wakeup_ticks() {
+            Some(t) => (t.saturating_mul(vm.task_tick_unit_ms())).min(i32::MAX as u32) as i32,
+            None => -1,
+        }
+    })
+}
+
+/// Whether the scheduler still has something that can run: a ready task, or one sleeping until a
+/// deadline. 0 means the host loop is done.
+#[unsafe(no_mangle)]
+pub extern "C" fn sabi_task_pending() -> u32 {
+    with(|st| u32::from(st.vm.as_ref().map(|vm| vm.task_pending()).unwrap_or(false)))
+}
+
+/// Loads the compiled binary and makes the program itself a task, instead of running it on the
+/// root context (`sabi_start`). Its `sleep` is then the scheduler's, which the host's clock
+/// drives — which is what makes a plain `sleep 1` at the top level wait a second. `Task.current`
+/// answers that task rather than the "main" wrapper, which is the visible difference.
+#[unsafe(no_mangle)]
+pub extern "C" fn sabi_start_as_task() -> u32 {
+    with(|st| {
+        if st.vm.is_none() {
+            let r = new_vm(st);
+            if r != OK { return r; }
+        }
+        let Some(bin) = st.bin.clone() else { st.text = b"nothing compiled".to_vec(); return INTERNAL_ERROR };
+        let root = sabiruby::rite::parse(&bin).map(|r| r.root).unwrap_or(0);
+        let vm = st.vm.as_mut().unwrap();
+        let irep = match vm.load(&bin) {
+            Ok(i) => i,
+            Err(e) => { st.text = vm.describe_error(&e).into_bytes(); return INTERNAL_ERROR }
+        };
+        st.offset = irep - root;
+        match vm.task_spawn(irep, 128, Some("main")) {
+            Ok(task) => { vm.gc_register(task); st.program_task = Some(task); OK }
+            Err(e) => { st.text = vm.describe_error(&e).into_bytes(); INTERNAL_ERROR }
+        }
+    })
+}
+
+/// How the program's own task stands: 0 still running, 1 finished, 2 ended with an exception it
+/// did not handle (the message is `sabi_take_text`, in the form `sabi_step` reports), 3 no task.
+#[unsafe(no_mangle)]
+pub extern "C" fn sabi_task_program_state() -> u32 {
+    with(|st| {
+        let Some(task) = st.program_task else { return INTERNAL_ERROR };
+        let Some(vm) = st.vm.as_mut() else { return INTERNAL_ERROR };
+        if !vm.task_finished(task) { return 0; }
+        let value = vm.task_value(task);
+        if value.obj().map(|o| matches!(vm.heap.get(o).kind, sabiruby::object::ObjKind::Exception)).unwrap_or(false) {
+            st.text = {
+                let vm = st.vm.as_mut().unwrap();
+                vm.describe_error(&sabiruby::VmError::Raise(value)).into_bytes()
+            };
+            return RUNTIME_ERROR;
+        }
+        1
     })
 }

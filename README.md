@@ -25,6 +25,14 @@ the page is static (GitHub Pages) and everything runs in a Web Worker.
   behind, the catch tables a `raise` walks, the fibers, the heap and the GC, and a histogram of
   the executed opcodes. Hovering an opcode shows its definition and summary. This is what the
   reference mruby on wasm cannot do without patching `vm.c`; see `docs/ideas.md`.
+* **実時間** makes `sleep` wait on the browser's clock instead of costing nothing. mruby-task's
+  tick is counted in instructions here, so a sleeping task is normally woken the moment the
+  scheduler runs out of other work; with the toggle on, the program itself runs as a task, the
+  worker moves the scheduler's clock from the wall clock, and waits out the rest on the event
+  loop — so `sleep 1` is a second, and another task runs during it. No `SharedArrayBuffer` and no
+  cross-origin isolation are involved: the VM returns to JS between two instructions, so nothing
+  has to block. The one visible difference is that `Task.current` answers the program's own task.
+  Off while debugging.
 * **Share link** puts the code (up to 8 KB) into the URL.
 
 ## Numbers

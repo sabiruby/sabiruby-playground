@@ -75,6 +75,30 @@ export class Sabi {
   /** Prism's pretty-printed syntax tree of `src` (as the book's listings). */
   ast(src) { return this.withBytes(src, (p, n) => decoder.decode(this.take((lp) => this.x.sabi_ast(p, n, lp)))); }
 
+  // ---- real time: the host drives mruby-task's clock (see docs/playground.md)
+
+  /** Runs the program as a task instead of on the root context, so its `sleep` is the
+   *  scheduler's and the host's clock carries it. */
+  startAsTask() { return this.x.sabi_start_as_task(); }
+  /** 0 still running, 1 finished, 2 ended with an exception (`text()`), 3 no task. */
+  taskProgramState() { return this.x.sabi_task_program_state(); }
+  /** The host moves the clock from here on (`taskAdvanceTicks`); an idle scheduler no longer
+   *  jumps it, which is what makes a sleep cost real time. */
+  taskExternalClock(on) { this.x.sabi_task_external_clock(on ? 1 : 0); }
+  /** Milliseconds one tick stands for (`MRB_TICK_UNIT`). */
+  taskTickUnitMs() { return this.x.sabi_task_tick_unit_ms(); }
+  taskAdvanceTicks(n) { if (n > 0) this.x.sabi_task_advance_ticks(n); }
+  /** One turn: ready tasks, one timeslice each, until `budget` instructions are spent or
+   *  nothing is ready. `{status, spent}`. */
+  taskRun(budget) {
+    const status = this.x.sabi_task_run(budget, this.scratch + 4);
+    return { status, spent: this.view().getUint32(this.scratch + 4, true) };
+  }
+  /** Milliseconds until the earliest sleeping task is due, or -1 where none is. */
+  taskNextWakeupMs() { return this.x.sabi_task_next_wakeup_ms(); }
+  /** Whether a task is ready, or sleeping until a deadline: the host loop's exit test. */
+  taskPending() { return this.x.sabi_task_pending() !== 0; }
+
   // ---- debugging (src/inspect.rs of the VM; see docs/playground.md)
 
   /** Records what the interpreter does until the next `takeTrace()`. */

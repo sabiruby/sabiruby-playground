@@ -13,8 +13,8 @@ concurrency:
   cancel-in-progress: true
 env:
   # the SabiRuby commit the playground is built from (VM + compiler); bump deliberately
-  # 319b5f9: sabiruby 0.3.0 with VERSION/REVISION, which the version line reads.
-  SABIRUBY_REF: 319b5f95067ed58c8af40d0cc00108db6c9165b0
+  # 1b04610: the host APIs the real-time scheduler drives (task_next_wakeup_ticks, task_pending).
+  SABIRUBY_REF: 1b046109f715a7758f6d7b97b11a0309e5924681
   WASI_SDK: "34"
   BINARYEN: "132"
 jobs:
