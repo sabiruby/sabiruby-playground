@@ -154,6 +154,20 @@ await check("a share link restores the code", async () => {
 
 // ---- the debugger (docs/playground.md, the VM's src/inspect.rs)
 
+await check("the step buttons are out of the way until the debug button is pressed", async () => {
+  // `hidden` on a `.controls` element is not enough on its own (`.controls { display: flex }`
+  // wins), and a page nobody had asked to debug showed a highlighted ステップオーバー
+  const visible = (sel) => page.$eval(sel, (e) => e.getBoundingClientRect().height > 0);
+  if (await visible("#debug-controls")) throw new Error("the step buttons show before デバッグ");
+  if (!(await visible("#debug"))) throw new Error("the デバッグ button is not shown");
+  await page.click("#debug");
+  await page.waitForSelector("#dump .insn.current", { timeout: 20000 });
+  if (!(await visible("#debug-controls"))) throw new Error("デバッグ did not open the step buttons");
+  if (await page.getAttribute("#debug", "aria-pressed") !== "true") throw new Error("デバッグ does not read as pressed");
+  await page.click("#debug-quit");
+  if (await visible("#debug-controls")) throw new Error("the step buttons stayed after デバッグ終了");
+});
+
 await check("step over moves the current instruction", async () => {
   await setCode("a = 1\nb = a + 1\nc = b * 2\nd = c - 1\ne = d + a\np e\n"); // more lines than the steps below
   await page.click("#debug");

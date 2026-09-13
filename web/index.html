@@ -27,20 +27,24 @@
     </label>
     <button id="run" class="primary" type="button" disabled title="Ctrl+Enter">実行</button>
     <button id="stop" type="button" disabled>停止</button>
-    <button id="debug" type="button" aria-pressed="false" title="命令ごとに止めて VM の中を見ます">デバッグ</button>
     <button id="toggle-ast" type="button" aria-pressed="true">AST</button>
     <button id="toggle-dump" type="button" aria-pressed="true">バイトコード</button>
     <button id="share" type="button">共有リンク</button>
   </div>
-  <div class="controls debug-controls" id="debug-controls" hidden>
-    <button id="step-over" class="primary" type="button" title="F10 — 次の行へ。メソッド呼び出しは中に入らず実行します">ステップオーバー</button>
-    <button id="step-into" type="button" title="F11 — 次の行へ。呼び出しがあれば中に入ります">ステップイン</button>
-    <button id="step-out" type="button" title="Shift+F11 — いまのフレームを抜けて呼び出し元へ戻ります">ステップアウト</button>
-    <button id="step-insn" type="button" title="Ctrl+F11 — 1 命令だけ進めます">命令ステップ</button>
-    <button id="continue" type="button" title="F5 — 最後まで（または例外まで）実行します">続行</button>
-    <button id="step-scope" type="button" aria-pressed="true" title="オフにすると、mrblib や gem の中では止まらず、プログラム自身の命令だけを追います">mrblib に入る</button>
-    <button id="debug-restart" type="button" title="Ctrl+Shift+F5 — 同じコードを最初から">再起動</button>
-    <button id="debug-quit" type="button" title="Shift+F5 — デバッグを終えて通常の表示に戻ります">停止</button>
+  <!-- the debug mode and what it can do, in one row: the button opens the group beside it -->
+  <div class="controls debug-controls">
+    <button id="debug" type="button" aria-pressed="false" title="命令ごとに止めて VM の中を見ます">デバッグ</button>
+    <div class="controls debug-steps" id="debug-controls" hidden>
+      <button id="step-over" class="primary" type="button" title="F10 — 次の行へ。メソッド呼び出しは中に入らず実行します">ステップオーバー</button>
+      <button id="step-into" type="button" title="F11 — 次の行へ。呼び出しがあれば中に入ります">ステップイン</button>
+      <button id="step-out" type="button" title="Shift+F11 — いまのフレームを抜けて呼び出し元へ戻ります">ステップアウト</button>
+      <button id="step-insn" type="button" title="Ctrl+F11 — 1 命令だけ進めます">命令ステップ</button>
+      <button id="continue" type="button" title="F5 — 最後まで（または例外まで）実行します">続行</button>
+      <span class="sep" aria-hidden="true"></span>
+      <button id="step-scope" type="button" aria-pressed="true" title="オフにすると、mrblib や gem の中では止まらず、プログラム自身の命令だけを追います">mrblib に入る</button>
+      <button id="debug-restart" type="button" title="Ctrl+Shift+F5 — 同じコードを最初から">再起動</button>
+      <button id="debug-quit" type="button" title="Shift+F5 — デバッグを終えて通常の表示に戻ります">デバッグ終了</button>
+    </div>
   </div>
 </header>
 

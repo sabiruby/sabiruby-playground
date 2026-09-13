@@ -219,9 +219,15 @@ select { max-width: 16rem; padding-right: 8px; }
 .cm-matchingBracket { background: var(--rust-soft); outline: 1px solid var(--rust); }
 
 /* ---- debugging: the toolbar, the listing rows, the VM panes (web/debug.js) */
-.debug-controls { width: 100%; padding-bottom: 10px; gap: 6px; }
-.debug-controls button { font-size: 0.82rem; }
-.debug-controls button.primary { padding-inline: 14px; }
+/* `hidden` alone would lose to `.controls { display: flex }`, which is how the step buttons
+   once showed on a page nobody had asked to debug */
+.controls[hidden] { display: none; }
+.debug-controls { width: 100%; justify-content: flex-end; padding-bottom: 10px; gap: 8px; }
+/* what the debug button opens, beside it: one size smaller, so the mode reads as the heading */
+.debug-steps { gap: 6px; }
+.debug-steps button { font-size: 0.82rem; }
+.debug-steps button.primary { padding-inline: 14px; }
+.debug-steps .sep { width: 1px; align-self: stretch; margin-inline: 4px; background: var(--rule); }
 
 /* the bytecode listing as rows */
 #dump .insn { display: block; }
