@@ -32,7 +32,9 @@ the page is static (GitHub Pages) and everything runs in a Web Worker.
   loop — so `sleep 1` is a second, and another task runs during it. No `SharedArrayBuffer` and no
   cross-origin isolation are involved: the VM returns to JS between two instructions, so nothing
   has to block. The one visible difference is that `Task.current` answers the program's own task.
-  Off while debugging.
+  Off while debugging. The sample **vm_task_realtime** is written to show both: the same
+  program, the same order, a millisecond with the toggle off and two thirds of a second with it
+  on.
 * **Share link** puts the code (up to 8 KB) into the URL.
 
 ## Numbers
