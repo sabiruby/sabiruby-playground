@@ -304,6 +304,10 @@
    "note": "Fiber タブ: タスクも context を 1 つずつ持ち、優先度順に入れ替わる"
   },
   {
+   "name": "vm_task_realtime",
+   "path": "samples/book/vm_task_realtime.rb"
+  },
+  {
    "name": "vm_task_sleep",
    "path": "samples/book/vm_task_sleep.rb",
    "note": "Fiber タブ: 眠ったタスクの context は残ったまま、別の context が走る"

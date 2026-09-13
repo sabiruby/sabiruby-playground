@@ -172,6 +172,29 @@ await check("実時間: sleep waits for real, and another task runs meanwhile", 
   }
 });
 
+await check("the 実時間 sample runs in both modes, and takes real time in one", async () => {
+  const src = await (await fetch(new URL("samples/book/vm_task_realtime.rb", url))).text();
+  const t0 = Date.now();
+  const fast = await runCode(src);
+  const fastMs = Date.now() - t0;
+  if (!/結果 \[:blink_done, :beep_done\]/.test(fast)) throw new Error(JSON.stringify(fast));
+  if (fastMs > 400) throw new Error(`the instruction-counted clock took ${fastMs} ms`);
+
+  await page.click("#realtime");
+  try {
+    const t1 = Date.now();
+    const slow = await runCode(src);
+    const slowMs = Date.now() - t1;
+    if (!/結果 \[:blink_done, :beep_done\]/.test(slow)) throw new Error(JSON.stringify(slow));
+    // blink every 100 ms and beep every 200 ms while main sleeps 650 ms
+    if (slowMs < 600 || slowMs > 2000) throw new Error(`wall clock ${slowMs} ms`);
+    const stamps = [...slow.matchAll(/^\s*(\d+) ms/gm)].map((m) => Number(m[1]));
+    if (Math.max(...stamps) < 600) throw new Error(`the sample's own clock stopped at ${Math.max(...stamps)}`);
+  } finally {
+    await page.click("#realtime");
+  }
+});
+
 await check("the same program without 実時間 does not wait", async () => {
   const t0 = Date.now();
   await runCode('3.times { sleep 0.1 }\nputs "done"\n');
