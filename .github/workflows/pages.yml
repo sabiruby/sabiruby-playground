@@ -13,9 +13,9 @@ concurrency:
   cancel-in-progress: true
 env:
   # the SabiRuby commit the playground is built from (VM + compiler); bump deliberately
-  # 9f64d3b: mruby-regexp (the last commit pushed to kishima/sabiruby). Raise this to the tip
-  # once require/task and the rest are pushed; the page then gets Regexp, Task and the newer gems.
-  SABIRUBY_REF: 9f64d3ba310d7496bfae8cdd3815b981ad37ac9a
+  # 878fcc7: the tip after the gems — Regexp, require/load, Task, sleep, strftime,
+  # source_location and Exception#backtrace are all in the page from here.
+  SABIRUBY_REF: 878fcc7545e14fd62f54434acd341b8d25e02973
   WASI_SDK: "34"
   BINARYEN: "132"
 jobs:
