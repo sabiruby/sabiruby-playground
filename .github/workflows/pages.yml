@@ -13,9 +13,8 @@ concurrency:
   cancel-in-progress: true
 env:
   # the SabiRuby commit the playground is built from (VM + compiler); bump deliberately
-  # 1fe5f9d: sabiruby 0.3.0 — Regexp, require/load, Task, sleep, strftime, source_location
-  # and Exception#backtrace are all in the page from here.
-  SABIRUBY_REF: 1fe5f9d77099ee4389d8451b1369a0de0e2d544c
+  # 319b5f9: sabiruby 0.3.0 with VERSION/REVISION, which the version line reads.
+  SABIRUBY_REF: 319b5f95067ed58c8af40d0cc00108db6c9165b0
   WASI_SDK: "34"
   BINARYEN: "132"
 jobs:

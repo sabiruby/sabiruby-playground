@@ -77,12 +77,15 @@ fn new_vm(st: &mut State) -> u32 {
     }
 }
 
-/// `"sabiruby-wasm 0.1.0 / compiler: mruby 4.1.0-rc (...), Prism 1.9.0"`, NUL-terminated.
+/// `"SabiRuby 0.3.0 (1fe5f9d) / compiler: mruby 4.1.0-rc (...), Prism 1.9.0"`, NUL-terminated.
+/// The VM and the commit it was built from, which is what a reader of the page wants; this
+/// wrapper crate's own version says nothing about what is running.
 #[unsafe(no_mangle)]
 pub extern "C" fn sabi_version() -> *const u8 {
     with(|st| {
         if st.version.is_empty() {
-            st.version = format!("sabiruby-wasm {} / compiler: {}\0", env!("CARGO_PKG_VERSION"), sabiruby_compiler::version()).into_bytes();
+            let rev = &sabiruby::REVISION[..sabiruby::REVISION.len().min(7)];
+            st.version = format!("SabiRuby {} ({rev}) / compiler: {}\0", sabiruby::VERSION, sabiruby_compiler::version()).into_bytes();
         }
         st.version.as_ptr()
     })
