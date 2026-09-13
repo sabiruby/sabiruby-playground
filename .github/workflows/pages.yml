@@ -13,7 +13,9 @@ concurrency:
   cancel-in-progress: true
 env:
   # the SabiRuby commit the playground is built from (VM + compiler); bump deliberately
-  SABIRUBY_REF: bbd0e58dcead3b4fc933a7ade679da2a8acee3a9  # bbd0e58: src/inspect.rs (snapshots and traces) and the DBG line numbers
+  # 9f64d3b: mruby-regexp (the last commit pushed to kishima/sabiruby). Raise this to the tip
+  # once require/task and the rest are pushed; the page then gets Regexp, Task and the newer gems.
+  SABIRUBY_REF: 9f64d3ba310d7496bfae8cdd3815b981ad37ac9a
   WASI_SDK: "34"
   BINARYEN: "132"
 jobs:

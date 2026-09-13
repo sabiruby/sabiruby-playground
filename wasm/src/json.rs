@@ -364,7 +364,7 @@ fn pool_text(p: &sabiruby::rite::Pool) -> String {
         Pool::Str(b) => format!("{:?}", core::str::from_utf8(b).unwrap_or("?")),
         Pool::Int(i) => format!("{i}"),
         Pool::Float(f) => format!("{f}"),
-        Pool::BigInt(_) => "bigint".into(),
+        Pool::BigInt { .. } => "bigint".into(),
     }
 }
 
