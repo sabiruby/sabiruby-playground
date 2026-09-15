@@ -78,6 +78,9 @@ fn new_vm(st: &mut State) -> u32 {
         Ok(mut vm) => {
             vm.set_trace(trace);
             vm.set_gc_stress(stress);
+            // the opcode histogram (`sabi_op_counts`): the VM stopped counting by default,
+            // since the read-modify-write per instruction costs the instruction loop 3 to 7%
+            vm.set_op_counting(true);
             // the same compiler the page compiles the program with, as the VM's host: this is
             // what `eval`, `instance_eval` and `Binding#eval` ask for a compile (there are no
             // files behind `require` in a browser, so that one still raises LoadError)

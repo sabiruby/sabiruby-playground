@@ -13,8 +13,8 @@ concurrency:
   cancel-in-progress: true
 env:
   # the SabiRuby commit the playground is built from (VM + compiler); bump deliberately
-  # b85b049: Task.run is a no-op inside a task, which a host-driven scheduler needs.
-  SABIRUBY_REF: b85b049ed1624be2776f1c4690ac9b4ada1eb360
+  # 9fa5b0b: Vm::set_op_counting (the histogram is off by default), stages 2-5 of host-bridge-plan
+  SABIRUBY_REF: 9fa5b0bca5bc8ccbdfb07820a8aa64bf51781fd2
   WASI_SDK: "34"
   BINARYEN: "132"
 jobs:
