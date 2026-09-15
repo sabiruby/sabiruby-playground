@@ -10,7 +10,7 @@ description = "SabiRuby (VM) and the reference mruby compiler as one wasm32-wasi
 crate-type = ["cdylib"]
 
 [dependencies]
-# Local checkout next to this repository (see README: Building). CI checks out kishima/sabiruby there.
+# Local checkout next to this repository (see README: Building). CI checks out sabiruby/sabiruby there.
 sabiruby = { path = "../../sabiruby" }
 sabiruby-compiler = { path = "../../sabiruby/compiler", features = ["ast", "host"] }
 

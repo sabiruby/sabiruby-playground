@@ -26,7 +26,7 @@ jobs:
           path: sabiruby-playground
       - uses: actions/checkout@v4
         with:
-          repository: kishima/sabiruby
+          repository: sabiruby/sabiruby
           ref: ${{ env.SABIRUBY_REF }}
           path: sabiruby
       - uses: dtolnay/rust-toolchain@stable

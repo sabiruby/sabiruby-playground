@@ -1,10 +1,10 @@
 # SabiRuby Playground
 
 Write Ruby in the browser and run it with **mruby 4.1's own compiler** and the
-[SabiRuby](https://github.com/kishima/sabiruby) VM, both compiled to WebAssembly. No server:
+[SabiRuby](https://github.com/sabiruby/sabiruby) VM, both compiled to WebAssembly. No server:
 the page is static (GitHub Pages) and everything runs in a Web Worker.
 
-**https://kishima.github.io/sabiruby-playground/**
+**https://sabiruby.github.io/sabiruby-playground/**
 
 * The compiler is the reference one, not a port: mruby 4.1.0-rc's `mruby-compiler` (Prism
   1.9.0 + mruby's code generator), C built with wasi-sdk
@@ -75,7 +75,7 @@ debugger `sabi_trace`, `sabi_step_until`, `sabi_state`, `sabi_take_trace`, `sabi
 `wasi_snapshot_preview1` functions for stdio and the environment (the VM needs no clock and no
 randomness); in the browser they come from browser_wasi_shim. The page compiles the module
 once and hands the `WebAssembly.Module` to each new worker. Design notes:
-[`docs/playground.md`](https://github.com/kishima/sabiruby/blob/main/docs/playground.md) in the
+[`docs/playground.md`](https://github.com/sabiruby/sabiruby/blob/main/docs/playground.md) in the
 SabiRuby repository.
 
 ### Building locally
@@ -97,7 +97,7 @@ npx playwright-core install chromium && npm run test:browser
 
 | what | version |
 |---|---|
-| SabiRuby | commit `bbd0e58` of kishima/sabiruby (`sabiruby` 0.2.0 with `src/inspect.rs` and the DBG line numbers + `sabiruby-compiler` with the wasm build and the feature `ast`) |
+| SabiRuby | commit `bbd0e58` of sabiruby/sabiruby (`sabiruby` 0.2.0 with `src/inspect.rs` and the DBG line numbers + `sabiruby-compiler` with the wasm build and the feature `ast`) |
 | mruby compiler | 4.1.0-rc (`3cf73ee`), Prism 1.9.0 |
 | wasi-sdk | 34.0 (clang 23) |
 | binaryen (`wasm-opt`) | version_132 |

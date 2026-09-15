@@ -26,7 +26,7 @@
 * `web/index.html`: 欄は 4 つ（コード、AST、バイトコード、実行結果）。`#dump` は `<pre>` にダンプの文字列を入れているだけで、行の構造は無い。
 * テスト: `test/api.mjs`（Node、ABI の経路 14 件。`runAll(src)` で compile→start→step）、`test/fixtures.mjs`（17 fixture）、
   `test/browser.mjs`（Playwright、headless Chromium。ページの実ボタン）。`npm test` が Node の 2 つ、`npm run test:browser` がブラウザ。
-* ビルド: `tools/build.sh`（wasi-sdk、`wasm-opt`）。CI（`.github/workflows/pages.yml`）は `kishima/sabiruby` を固定コミットで隣に checkout する。
+* ビルド: `tools/build.sh`（wasi-sdk、`wasm-opt`）。CI（`.github/workflows/pages.yml`）は `sabiruby/sabiruby` を固定コミットで隣に checkout する。
   **VM 側の変更を取り込むときは、この固定コミットを進める。**
 
 ### VM 側（`../sabiruby`、crate `sabiruby`、no_std + alloc）
