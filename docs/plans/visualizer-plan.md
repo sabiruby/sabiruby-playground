@@ -4,7 +4,7 @@
 方針は著者決定（2026-09-12、「いいアイデアだ。1〜6 を実装指示書にしてほしい」）。
 作業は 2 つのリポジトリにまたがる: **VM 側**（`../sabiruby`。状態の取り出し、出来事の記録、DBG の復号）と
 **Playground 側**（このリポジトリ。C ABI、Worker、画面）。
-作業前に `../sabiruby/README.md` の Rules と Verification、このリポジトリの `README.md`、`docs/playground.md`、`docs/ideas.md` を読むこと。
+作業前に `../sabiruby/README.md` の Rules と Verification、このリポジトリの `README.md`、`sabiruby/docs/design/playground.md`、`docs/ideas.md` を読むこと。
 
 狙いは「本家の wasm ではできない見せ方」= **命令単位で VM の中を見せる**こと。本『Deep dive into mruby』の説明
 （環境とクロージャ、longjmp 無しの大域脱出、Fiber、GC、opcode リファレンス）をそのまま動かして見せる。
@@ -156,7 +156,7 @@ pub struct ValueView { pub text: String, pub class: String, pub id: Option<ObjId
 
 ### 2.1 JSON
 
-serde は入れない（サイズ。`docs/playground.md` の大きさの表が指標）。`wasm/src/json.rs` に 100 行程度の書き手（オブジェクト／配列／文字列のエスケープ／数値）を書き、
+serde は入れない（サイズ。`sabiruby/docs/design/playground.md` の大きさの表が指標）。`wasm/src/json.rs` に 100 行程度の書き手（オブジェクト／配列／文字列のエスケープ／数値）を書き、
 `Snapshot`／`TraceEvent` を手で書き出す。キー名はこの文書のフィールド名（snake_case）をそのまま使う。
 
 ### 2.2 追加する関数
@@ -243,7 +243,7 @@ serde は入れない（サイズ。`docs/playground.md` の大きさの表が�
 * sabiruby: `cargo test --workspace`（新規 `tests/inspect.rs` 含む）、`tools/check_no_std.sh`、`tools/bench.sh` で trace off の数字が変わらないこと（`docs/bench.md` の前回と比べて ±3% 以内。超えたら原因を書く）。
 * Playground: `npm test`（fixtures 17 + api の既存 14 と追加分）、`npm run test:browser` に追加: 「デバッグ」→「1 行」を 3 回押して `#dump .current` が動くこと、
   「VM の状態」のフレーム表に `main` が出ること、`vm_closure.rb` で「続行」の後に環境タブに `detached` が 1 つあること、opcode の吹き出しが出ること。
-* 大きさ: `tools/build.sh` の出力（gzip 後）を `docs/playground.md` の表に前後で書く。JSON 書き手と snapshot で数十 KB 増える見込み。100 KB を超えたら報告。
+* 大きさ: `tools/build.sh` の出力（gzip 後）を `sabiruby/docs/design/playground.md` の表に前後で書く。JSON 書き手と snapshot で数十 KB 増える見込み。100 KB を超えたら報告。
 * 本家との一致の表示（案 7）はこの指示書の範囲外だが、既存の「本家 mruby の出力と比較」ボタンはデバッグ中も壊さない。
 
 ## 6. 順序と規模
@@ -251,13 +251,13 @@ serde は入れない（サイズ。`docs/playground.md` の大きさの表が�
 1. VM 1.1（DBG）→ 1.3（snapshot）→ 2（ABI、api.mjs）→ 3／4.1／4.2／4.3-1（ステップ実行とフレーム表）。ここまでで案 1 が動く。1.5 日。
 2. 1.2（trace）→ 4.3-2／3／4（環境、例外、Fiber）。1.5 日。
 3. 4.3-5（GC）、4.3-6 と 4.4／4.5（統計と opcode 吹き出し）。1 日。
-4. 4.6、`docs/playground.md` の更新、README、CI の固定コミット更新、公開（Pages）。半日。
+4. 4.6、`sabiruby/docs/design/playground.md` の更新、README、CI の固定コミット更新、公開（Pages）。半日。
 
 ## 7. 記録
 
 * sabiruby: `docs/inspect.md`（新）、README の docs 一覧、`docs/bench.md`（trace off の再計測）。
-* Playground: `docs/playground.md` に「デバッグ」節（ABI 表、メッセージ、欄、データの出所）と大きさの表の更新。`docs/ideas.md` の 1〜6 に「実装済み」と日付。
-* 指示書から変えた点は理由付きで `docs/playground.md` に書く（`compiler-plan.md`→`compiler.md` と同じ形）。
+* Playground: `sabiruby/docs/design/playground.md` に「デバッグ」節（ABI 表、メッセージ、欄、データの出所）と大きさの表の更新。`docs/ideas.md` の 1〜6 に「実装済み」と日付。
+* 指示書から変えた点は理由付きで `sabiruby/docs/design/playground.md` に書く（`compiler-plan.md`→`compiler.md` と同じ形）。
 * コミットは両リポジトリで分け、Playground の CI が指す sabiruby のコミットを更新する。push は著者が行う。
 
 ## 8. 範囲外

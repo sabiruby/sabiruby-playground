@@ -3,7 +3,7 @@
 Notes from 2026-09-12 (author: "as it stands it is not much different from running
 mruby's wasm; is there a way of showing it that only SabiRuby makes possible?").
 
-**1–6 are implemented (2026-09-12)**, from [`visualizer-plan.md`](visualizer-plan.md): the
+**1–6 are implemented (2026-09-12)**, from [`plans/visualizer-plan.md`](plans/visualizer-plan.md): the
 "デバッグ" button steps the VM by instruction, by line or by call/return, and the "VM の状態"
 pane has the six tabs below. The VM side is `sabiruby`'s `src/inspect.rs` and the DBG reader in
 `src/rite.rs` (`docs/inspect.md` there); this side is `wasm/src/json.rs`, `web/debug.js` and the
