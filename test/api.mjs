@@ -95,6 +95,15 @@ const checks = {
     assert.equal(r, FINISHED);
     assert.equal(decoder.decode(sabi.output()), "42\n");
   },
+  "highlight() gives one category byte per source byte (for an editor elsewhere)": () => {
+    // the expectations are what the module answers, printed and read back — not guessed
+    const map = (src) => [...sabi.highlight(src)].join("");
+    assert.equal(map("def a; end"), "1110800111"); // keyword, method name, keyword
+    assert.equal(map("tell :all"), "888805555"); // a bare call is a method name, the symbol is one run
+    assert.equal(map("def foo("), "11108880"); // a source that does not parse still gets a map
+    assert.equal(map("# 甲虫\np 1\n"), "3333333338040"); // bytes, not characters: the comment is 9 of them
+    assert.equal(map(""), "");
+  },
   "a file that is not RITE is rejected by sabi_load": () => {
     assert.equal(sabi.load(new Uint8Array([1, 2, 3])), COMPILE_ERROR);
     assert.match(sabi.text(), /not a RITE binary/);

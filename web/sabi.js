@@ -76,6 +76,14 @@ export class Sabi {
   binary() { return this.take(this.x.sabi_take_binary); }
   /** Prism's pretty-printed syntax tree of `src` (as the book's listings). */
   ast(src) { return this.withBytes(src, (p, n) => decoder.decode(this.take((lp) => this.x.sabi_ast(p, n, lp)))); }
+  /** One category byte per byte of `src`, for an editor elsewhere to colour with — the game in
+   *  rubevy_games. 0 default, 1 keyword, 2 string, 3 comment, 4 number, 5 symbol, 6 constant,
+   *  7 variable, 8 method name; a source that does not parse still gets a map. `Uint8Array` as
+   *  long as the source in UTF-8 bytes. */
+  highlight(src) {
+    const status = this.withBytes(src, (p, n) => this.x.sabi_highlight(p, n));
+    return status === OK ? this.take(this.x.sabi_take_highlight) : new Uint8Array(0);
+  }
 
   // ---- real time: the host drives mruby-task's clock (see docs/playground.md)
 

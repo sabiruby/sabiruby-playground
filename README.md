@@ -41,7 +41,7 @@ the page is static (GitHub Pages) and everything runs in a Web Worker.
 
 | | |
 |---|---|
-| `sabiruby.wasm` as deployed | 1,303,895 bytes, 438,065 over gzip (GitHub Pages compresses it); 1,233,982 / 421,485 before the debugger, 1,169,017 / 421,881 before the AST pane |
+| `sabiruby.wasm` | 2,445,509 bytes, 840,268 over gzip (GitHub Pages compresses it) — built here with wasi-sdk 34 and binaryen 132 against SabiRuby `7be7b86`; of those `sabi_highlight` costs 1,736 bytes (493 over gzip), the same tree measured with and without the export. The deployed module was 2,439,299 bytes on 2026-09-15 (SabiRuby `9fa5b0b`); earlier and smaller: 1,303,895 / 438,065, 1,233,982 / 421,485 before the debugger, 1,169,017 / 421,881 before the AST pane |
 | page ready on the deployed site, fresh browser (navigation start to the Run button enabled: fonts, CodeMirror, the module, the worker, the VM) | 0.43–1.45 s (headless Chromium, two runs, 2026-09-12) |
 | the same from a local server | about 0.37 s |
 | instantiate the module and create the VM with mrblib | 15 ms (Node) |
@@ -69,9 +69,11 @@ test/        fixtures.mjs, api.mjs (Node), browser.mjs (Playwright + Chromium)
 
 The module is a WASI reactor with a C ABI (no wasm-bindgen): `sabi_compile`, `sabi_load`,
 `sabi_reset`, `sabi_start`, `sabi_step(budget)`, `sabi_take_output`, `sabi_take_text`,
-`sabi_dump`, `sabi_ast`, `sabi_stats`, `sabi_alloc`/`sabi_free`, `sabi_version`, and for the
-debugger `sabi_trace`, `sabi_step_until`, `sabi_state`, `sabi_take_trace`, `sabi_gc_collect`,
-`sabi_gc_stress`, `sabi_op_counts`, `sabi_dump_json`. It imports only
+`sabi_dump`, `sabi_ast`, `sabi_highlight`/`sabi_take_highlight` (one category byte per source
+byte, for an editor elsewhere to colour with), `sabi_stats`, `sabi_alloc`/`sabi_free`,
+`sabi_version`, and for the debugger `sabi_trace`, `sabi_step_until`, `sabi_state`,
+`sabi_take_trace`, `sabi_gc_collect`, `sabi_gc_stress`, `sabi_op_counts`, `sabi_dump_json`.
+It imports only
 `wasi_snapshot_preview1` functions for stdio and the environment (the VM needs no clock and no
 randomness); in the browser they come from browser_wasi_shim. The page compiles the module
 once and hands the `WebAssembly.Module` to each new worker. Design notes:
@@ -97,7 +99,7 @@ npx playwright-core install chromium && npm run test:browser
 
 | what | version |
 |---|---|
-| SabiRuby | commit `bbd0e58` of sabiruby/sabiruby (`sabiruby` 0.2.0 with `src/inspect.rs` and the DBG line numbers + `sabiruby-compiler` with the wasm build and the feature `ast`) |
+| SabiRuby | commit `7be7b86` of sabiruby/sabiruby (`sabiruby` 0.5.2 + `sabiruby-compiler` 0.2.3 with the features `ast` and `host`), the `SABIRUBY_REF` of `.github/workflows/pages.yml` |
 | mruby compiler | 4.1.0-rc (`3cf73ee`), Prism 1.9.0 |
 | wasi-sdk | 34.0 (clang 23) |
 | binaryen (`wasm-opt`) | version_132 |
