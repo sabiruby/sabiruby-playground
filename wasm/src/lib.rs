@@ -25,6 +25,8 @@ struct State {
     vm: Option<Vm>,
     /// The RITE binary compiled or loaded last.
     bin: Option<Vec<u8>>,
+    /// Category byte per source byte from the last `sabi_highlight`.
+    hl: Vec<u8>,
     /// Message of the last failure (diagnostics or the exception).
     text: Vec<u8>,
     /// Buffer behind the pointer the last `sabi_take_*` / `sabi_dump` returned.
@@ -252,6 +254,33 @@ pub unsafe extern "C" fn sabi_ast(src: *const u8, len: usize, len_out: *mut u32)
     let src = unsafe { std::slice::from_raw_parts(src, len) };
     let text = sabiruby_compiler::ast(src, FILENAME).unwrap_or_default();
     with(|st| give(st, text.into_bytes(), len_out))
+}
+
+/// Classifies `src` for an editor's colours, one category byte per source byte, and keeps the
+/// map for `sabi_take_highlight` (`sabiruby_compiler::highlight`, i.e. Prism's own lexer and a
+/// pass over its tree): 0 default, 1 keyword, 2 string, 3 comment, 4 number, 5 symbol,
+/// 6 constant, 7 variable, 8 method name. For a host that colours Ruby it does not compile
+/// here — the game in rubevy_games. Always 0: a source that does not parse still gets a map,
+/// which is what an editor needs, and the map is as long as the source.
+///
+/// # Safety
+/// `src` must point to `len` readable bytes.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn sabi_highlight(src: *const u8, len: usize) -> u32 {
+    // SAFETY: by the contract above.
+    let src = unsafe { std::slice::from_raw_parts(src, len) };
+    let map = sabiruby_compiler::highlight(src);
+    with(|st| { st.hl = map; OK })
+}
+
+/// The map the last `sabi_highlight` made. Empty before one has run. The map stays, as the
+/// binary stays behind `sabi_take_binary`.
+#[unsafe(no_mangle)]
+pub extern "C" fn sabi_take_highlight(len_out: *mut u32) -> *const u8 {
+    with(|st| {
+        let hl = st.hl.clone();
+        give(st, hl, len_out)
+    })
 }
 
 /// Records what the interpreter does (environments, unwinding, fibers, collections) until the
