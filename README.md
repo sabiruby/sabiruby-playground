@@ -41,7 +41,7 @@ the page is static (GitHub Pages) and everything runs in a Web Worker.
 
 | | |
 |---|---|
-| `sabiruby.wasm` | 2,445,509 bytes, 840,268 over gzip (GitHub Pages compresses it) — built here with wasi-sdk 34 and binaryen 132 against SabiRuby `7be7b86`; of those `sabi_highlight` costs 1,736 bytes (493 over gzip), the same tree measured with and without the export. The deployed module was 2,439,299 bytes on 2026-09-15 (SabiRuby `9fa5b0b`); earlier and smaller: 1,303,895 / 438,065, 1,233,982 / 421,485 before the debugger, 1,169,017 / 421,881 before the AST pane |
+| `sabiruby.wasm` | 2,449,790 bytes, 854,550 over gzip as GitHub Pages serves it (measured off the published page on 2026-09-21: `content-length`, and `curl --compressed`'s download size) — built by `pages.yml` with wasi-sdk 34 and binaryen 132 against SabiRuby `8d0fea2`. Against `7be7b86` it was 2,445,509 and 840,268, built here; of those `sabi_highlight` costs 1,736 bytes (493 over gzip), the same tree measured with and without the export. The deployed module was 2,439,299 bytes on 2026-09-15 (SabiRuby `9fa5b0b`); earlier and smaller: 1,303,895 / 438,065, 1,233,982 / 421,485 before the debugger, 1,169,017 / 421,881 before the AST pane |
 | page ready on the deployed site, fresh browser (navigation start to the Run button enabled: fonts, CodeMirror, the module, the worker, the VM) | 0.43–1.45 s (headless Chromium, two runs, 2026-09-12) |
 | the same from a local server | about 0.37 s |
 | instantiate the module and create the VM with mrblib | 15 ms (Node) |
