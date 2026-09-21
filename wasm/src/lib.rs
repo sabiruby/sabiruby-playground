@@ -313,7 +313,7 @@ pub extern "C" fn sabi_step_until(mode: u32, budget: u32) -> u32 {
                 Err(e) => { st.text = vm.describe_error(&e).into_bytes(); RUNTIME_ERROR }
             };
         }
-        let (line0, depth0) = (vm.current_line(), vm.ci.len());
+        let (line0, depth0) = (vm.next_line(), vm.ci.len());
         for _ in 0..budget.max(1) {
             match vm.step(1) {
                 Ok(Step::Paused) => {}
@@ -321,7 +321,7 @@ pub extern "C" fn sabi_step_until(mode: u32, budget: u32) -> u32 {
                 Err(e) => { st.text = vm.describe_error(&e).into_bytes(); return RUNTIME_ERROR }
             }
             let depth = vm.ci.len();
-            let line = vm.current_line();
+            let line = vm.next_line();
             let line_changed = line.is_some() && line != line0;
             let stop = match mode {
                 0 => true,                                            // one instruction
