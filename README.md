@@ -99,7 +99,7 @@ npx playwright-core install chromium && npm run test:browser
 
 | what | version |
 |---|---|
-| SabiRuby | commit `8d0fea2` of sabiruby/sabiruby (unreleased main past `sabiruby` 0.5.2 — it has `Vm::next_line`, which the stepper needs — + `sabiruby-compiler` 0.2.3 with the features `ast` and `host`), the `SABIRUBY_REF` of `.github/workflows/pages.yml` |
+| SabiRuby | tag `v0.6.1` (`479924e`) of sabiruby/sabiruby (`sabiruby` 0.6.1 — the first release line with `Vm::next_line`, which the stepper needs — + `sabiruby-compiler` 0.3.1 with the features `ast` and `host`), the `SABIRUBY_REF` of `.github/workflows/pages.yml` |
 | mruby compiler | 4.1.0-rc (`3cf73ee`), Prism 1.9.0 |
 | wasi-sdk | 34.0 (clang 23) |
 | binaryen (`wasm-opt`) | version_132 |
