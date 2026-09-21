@@ -13,9 +13,12 @@ concurrency:
   cancel-in-progress: true
 env:
   # the SabiRuby commit the playground is built from (VM + compiler); bump deliberately
-  # 7be7b86: sabiruby_compiler::highlight, which sabi_highlight needs to build at all (0.5.2;
-  # since 9fa5b0b also 0.5.0/0.5.1 — method visibility, the String and instruction-loop work)
-  SABIRUBY_REF: 7be7b86ffdfc220531c79ec8ec4b056835c1ca67
+  # 8d0fea2: Vm::next_line, which the stepper asks for by that name (wasm/src/lib.rs) — the
+  # former name, Vm::current_line, is a deprecated alias there and goes away next. Unreleased
+  # main, past 0.5.2: since 7be7b86 also sabiruby-serde's `declare`, Vm::backtrace_line and
+  # the host-store work. It is the commit rubevy_games' Cargo.lock names, so the games' pages
+  # and this one run the same VM (docs/worklog/2026-09-21-next-line.md)
+  SABIRUBY_REF: 8d0fea2993e75d05999c0a223b610123beeed86a
   WASI_SDK: "34"
   BINARYEN: "132"
 jobs:
