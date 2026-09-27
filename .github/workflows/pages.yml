@@ -13,12 +13,13 @@ concurrency:
   cancel-in-progress: true
 env:
   # the SabiRuby commit the playground is built from (VM + compiler); bump deliberately
-  # v0.6.1 (479924e): the published SabiRuby — sabiruby 0.6.1, sabiruby-compiler 0.3.1. It has
+  # v0.7.0 (4d3036a, 2026-09-27): sabiruby 0.7.0, sabiruby-compiler 0.4.0; built and checked
+  # locally with tools/build.sh before the bump. Before it, v0.6.1 (479924e). 0.6.x has
   # Vm::next_line, which the stepper asks for by that name (wasm/src/lib.rs); 0.5.2 has only the
   # former name, Vm::current_line, which 0.6.0 removed. rubevy_games' pages build this module
   # from the tag of the version its Cargo.lock names, which is this one, so the games' pages and
   # this one run the same VM (docs/worklog/2026-09-21-next-line.md)
-  SABIRUBY_REF: 479924e6a645eeb6d7a3b6f771dd6ce11f26207c
+  SABIRUBY_REF: 4d3036a9bfd4b94e6cfd478494398145e62435a9
   WASI_SDK: "34"
   BINARYEN: "132"
 jobs:
