@@ -41,7 +41,7 @@ the page is static (GitHub Pages) and everything runs in a Web Worker.
 
 | | |
 |---|---|
-| `sabiruby.wasm` | 2,449,790 bytes, 854,550 over gzip as GitHub Pages serves it (measured off the published page on 2026-09-21: `content-length`, and `curl --compressed`'s download size) — built by `pages.yml` with wasi-sdk 34 and binaryen 132 against SabiRuby `8d0fea2`, and the same 2,449,790 bytes against `v0.6.1` on 2026-09-22. Against `7be7b86` it was 2,445,509 and 840,268, built here; of those `sabi_highlight` costs 1,736 bytes (493 over gzip), the same tree measured with and without the export. The deployed module was 2,439,299 bytes on 2026-09-15 (SabiRuby `9fa5b0b`); earlier and smaller: 1,303,895 / 438,065, 1,233,982 / 421,485 before the debugger, 1,169,017 / 421,881 before the AST pane |
+| `sabiruby.wasm` | 2,449,790 bytes, 854,550 over gzip as GitHub Pages serves it (measured off the published page on 2026-09-21: `content-length`, and `curl --compressed`'s download size) — built by `pages.yml` with wasi-sdk 34 and binaryen 132 against SabiRuby `8d0fea2`, and the same 2,449,790 bytes against `v0.6.1` on 2026-09-22. Against `v0.8.0` (2026-10-19, built here with `tools/build.sh`, wasi-sdk 34 and binaryen 132; the source is `7f74cd1`'s) it is 2,469,338 bytes, 853,442 by `gzip -9`. Against `7be7b86` it was 2,445,509 and 840,268, built here; of those `sabi_highlight` costs 1,736 bytes (493 over gzip), the same tree measured with and without the export. The deployed module was 2,439,299 bytes on 2026-09-15 (SabiRuby `9fa5b0b`); earlier and smaller: 1,303,895 / 438,065, 1,233,982 / 421,485 before the debugger, 1,169,017 / 421,881 before the AST pane |
 | page ready on the deployed site, fresh browser (navigation start to the Run button enabled: fonts, CodeMirror, the module, the worker, the VM) | 0.43–1.45 s (headless Chromium, two runs, 2026-09-12) |
 | the same from a local server | about 0.37 s |
 | instantiate the module and create the VM with mrblib | 15 ms (Node) |
@@ -99,8 +99,8 @@ npx playwright-core install chromium && npm run test:browser
 
 | what | version |
 |---|---|
-| SabiRuby | tag `v0.6.1` (`479924e`) of sabiruby/sabiruby (`sabiruby` 0.6.1 — the first release line with `Vm::next_line`, which the stepper needs — + `sabiruby-compiler` 0.3.1 with the features `ast` and `host`), the `SABIRUBY_REF` of `.github/workflows/pages.yml` |
-| mruby compiler | 4.1.0-rc (`3cf73ee`), Prism 1.9.0 |
+| SabiRuby | tag `v0.8.0` (`7f74cd1`) of sabiruby/sabiruby (`sabiruby` 0.8.0 + `sabiruby-compiler` 0.5.0 with the features `ast` and `host`; `Vm::next_line`, which the stepper needs, is there since 0.6.0), the `SABIRUBY_REF` of `.github/workflows/pages.yml` |
+| mruby compiler | 4.1.0-rc (`3cf73ee`; `mruby-compiler` is the same in 4.1.0-rc2), Prism 1.9.0 |
 | wasi-sdk | 34.0 (clang 23) |
 | binaryen (`wasm-opt`) | version_132 |
 | Rust | stable, target `wasm32-wasip1` |
